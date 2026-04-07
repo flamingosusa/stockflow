@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Inventory Transfers</title>
+<style>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to bottom, #1E3A8A, #CBD5E1);
+    min-height: 100vh;
+    padding: 40px 20px;
+}
+.sale-card {
+    max-width: 1200px;
+    margin: auto;
+    padding: 30px 40px;
+    background: linear-gradient(to bottom, #4a90e2, #357ABD);
+    color: #fff;
+    border-radius: 14px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.35);
+}
+h1 { text-align: center; margin-bottom: 25px; }
+label { font-weight: 600; display: block; margin-bottom: 5px; }
+input, textarea, select { width: 100%; padding: 10px; border-radius: 6px; border: none; font-size: 14px; margin-bottom:10px; }
+textarea { resize: vertical; }
+table { width:100%; border-collapse:collapse; margin-top:25px; background: rgba(255,255,255,0.15); border-radius:10px; overflow:hidden; }
+th, td { padding:12px; text-align:left; }
+th { background: rgba(0,0,0,0.2); }
+.btn { padding: 8px 14px; border-radius:6px; border:none; cursor:pointer; font-weight:bold; }
+.btn-add { background:#fff; color:#357ABD; margin-top:15px; }
+.btn-remove { background:#ef4444; color:#fff; }
+.submit { width:50%; padding:14px; background:#fff; color:#357ABD; font-weight:bold; border-radius:8px; cursor:pointer; display:block; margin:auto; }
+.back-btn { background: rgba(255,255,255,0.9); color:#357ABD; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; cursor:pointer; margin-bottom:20px; }
+.back-btn:hover { background:#357ABD; color:#fff; }
+#message { text-align:center; font-weight:bold; margin-top:15px; font-size:16px; }
+#externalFields { margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.15); border-radius: 8px; }
+</style>
+</head>
+<body>
+
+<div class="sale-card">
+    <button class="back-btn" onclick="window.location.href='/'">← Back to Dashboard</button>
+    <h1>Inventory Transfers</h1>
+
+    <form id="transferForm">
+
+        <label for="transfer_type">Transfer Type</label>
+        <select id="transfer_type" required>
+            <option value="INTERNAL">Warehouse → Showroom</option>
+            <option value="INTERNAL">Warehouse → Store</option>
+            <option value="EXTERNAL">Store → Store</option>
+            <option value="INTERNAL">Store → Warehouse</option>
+
+        </select>
+
+        <div id="externalFields" style="display:none">
+            <label for="source_location">Source Store</label>
+            <input type="text" id="source_location" placeholder="STORE_1">
+
+            <label for="destination_location">Destination Store</label>
+            <input type="text" id="destination_location" placeholder="Store #204">
+        </div>
+
+        <label>Items</label>
+<table id="itemsTable">
+    <thead>
+        <tr>
+            <th>SKU</th>
+            <th>Item</th>
+            <th>Vendor</th>
+            <th>Quantity</th>
+            <th>Notes</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Rows will be added dynamically -->
+    </tbody>
+</table>
+
+<button type="button" class="btn btn-add" id="addItemBtn">Add Item</button>
+
+        <button type="submit" class="submit">Submit Transfer</button>
+    </form>
+
+    <div id="message"></div>
+</div>
+    
+ <script>
+const tableBody = document.querySelector("#itemsTable tbody");
+const addBtn = document.getElementById("addItemBtn");
+
+// Function to create a new row
+function addRow() {
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+        <td><input type="text" class="item-sku" placeholder="SKU"></td>
+        <td><input type="text" class="item-name" placeholder="Item Name"></td>
+        <td><input type="text" class="item-vendor" placeholder="Vendor"></td>
+        <td><input type="number" class="item-quantity" min="1" value="1"></td>
+        <td><input type="text" class="item-notes" placeholder="Notes"></td>
+        <td><button type="button" class="btn btn-remove">Remove</button></td>
+    `;
+
+    // Remove row button
+    row.querySelector(".btn-remove").addEventListener("click", () => {
+        row.remove();
+    });
+
+    tableBody.appendChild(row);
+}
+
+// Add first empty row on page load
+addRow();
+
+// Button click to add more rows
+addBtn.addEventListener("click", addRow);
+</script>   
+    
+
+<script>
+document.getElementById("transferForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    // 1️⃣ Grab transfer header values
+    const transferType = document.querySelector('input[name="transfer_type"]:checked').value;
+    const source = document.getElementById("source_location").value;
+    const destination = document.getElementById("destination_location").value;
+    const performedBy = document.getElementById("performed_by").value;
+    const notes = document.getElementById("transfer_notes").value;
+
+    // 2️⃣ Grab items from table
+    const items = [];
+    document.querySelectorAll("#itemsTable tbody tr").forEach(row => {
+        const sku = row.querySelector(".item-sku").value;
+        const itemName = row.querySelector(".item-name").value;
+        const vendor = row.querySelector(".item-vendor").value;
+        const quantity = row.querySelector(".item-quantity").value;
+        const itemNotes = row.querySelector(".item-notes").value;
+
+        if (sku && quantity) {
+            items.push({
+                sku: sku,
+                item_name: itemName,
+                vendor: vendor,
+                quantity: quantity,
+                notes: itemNotes
+            });
+        }
+    });
+
+    // 3️⃣ Send to backend
+    try {
+        const res = await fetch("/api/transfers/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                transfer_type: transferType,
+                source_location: source,
+                destination_location: destination,
+                performed_by: performedBy,
+                notes: notes,
+                items: items
+            })
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+            alert("Transfer saved! ID: " + result.transfer_id);
+            window.location.reload(); // or redirect to review page
+        } else {
+            alert("Error: " + result.error);
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Something went wrong.");
+    }
+});
+</script>
+    
+<script>
+    
+    tableBody.addEventListener("change", async (e) => {
+    if (e.target.classList.contains("item-input")) {
+        const item = e.target.value.trim();
+        const row = e.target.closest("tr");
+
+        if (!item) return;
+
+        try {
+            const res = await fetch(`/api/products/item/${encodeURIComponent(item)}`);
+            const data = await res.json();
+
+            if (data.error) {
+                alert(data.error);
+                row.querySelector(".item-sku").value = "";
+                row.querySelector(".item-vendor").value = "";
+                row.querySelector(".item-quantity").value = "";
+            } else {
+                row.querySelector(".item-sku").value = data.sku;
+                row.querySelector(".item-vendor").value = data.vendor;
+                row.querySelector(".item-quantity").value = data.quantity; // can be left as 0 for now
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error fetching product details");
+        }
+    }
+});</script>
+
+</body>
+</html>

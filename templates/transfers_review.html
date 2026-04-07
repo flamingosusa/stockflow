@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Review / Edit Transfers</title>
+
+<style>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to bottom, #1E3A8A, #CBD5E1);
+    min-height: 100vh;
+    padding: 40px 20px;
+}
+
+.card {
+    max-width: 1300px;
+    margin: auto;
+    padding: 30px 40px;
+    background: linear-gradient(to bottom, #4a90e2, #357ABD);
+    color: #fff;
+    border-radius: 14px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.35);
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+label {
+    font-weight: 600;
+    margin-bottom: 5px;
+    display: block;
+}
+
+input, select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+}
+
+.actions {
+    text-align: center;
+    margin-top: 25px;
+}
+
+.btn {
+    padding: 10px 18px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-search {
+    background: #fff;
+    color: #357ABD;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 30px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 14px;
+    text-align: center;
+}
+
+th {
+    background: rgba(0,0,0,0.25);
+}
+
+.btn-view {
+    background: #22c55e;
+    color: #fff;
+}
+
+.btn-edit {
+    background: #fbbf24;
+    color: #000;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <h2>Review / Edit Transfers</h2>
+
+    <!-- Filters -->
+    <div class="grid">
+        <div>
+            <label>Transfer #</label>
+            <input type="text" id="transferNo">
+        </div>
+
+        <div>
+            <label>Transfer Type</label>
+            <select id="transferType">
+                <option value="">All</option>
+                <option value="WH_TO_SHOWROOM">Warehouse → Showroom</option>
+                <option value="WH_TO_STORE">Warehouse → Store</option>
+                <option value="STORE_TO_STORE">Store → Store</option>
+                <option value="STORE_TO_WH">Store → Warehouse</option>
+            </select>
+        </div>
+
+        <div>
+            <label>From Date</label>
+            <input type="date" id="fromDate">
+        </div>
+
+        <div>
+            <label>To Date</label>
+            <input type="date" id="toDate">
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-search" onclick="searchTransfers()">Search</button>
+    </div>
+
+    <!-- Results -->
+    <table>
+        <thead>
+            <tr>
+                <th>Transfer #</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Total Items</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="resultsBody">
+            <!-- JS fills this -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+async function searchTransfers() {
+    const params = new URLSearchParams({
+        transfer_no: document.getElementById("transferNo").value,
+        type: document.getElementById("transferType").value,
+        from_date: document.getElementById("fromDate").value,
+        to_date: document.getElementById("toDate").value
+    });
+
+    const res = await fetch("/api/transfers/search?" + params);
+    const data = await res.json();
+
+    const body = document.getElementById("resultsBody");
+    body.innerHTML = "";
+
+    data.forEach(t => {
+        body.innerHTML += `
+            <tr>
+                <td>${t.transfer_no}</td>
+                <td>${t.date}</td>
+                <td>${t.type}</td>
+                <td>${t.items}</td>
+                <td>
+                    <button class="btn btn-view"
+                        onclick="viewPDF('${t.transfer_no}')">View</button>
+                    <button class="btn btn-edit"
+                        onclick="editTransfer('${t.transfer_no}')">Edit</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function viewPDF(no) {
+    window.open(`/transfers/${no}/pdf`, "_blank");
+}
+
+function editTransfer(no) {
+    window.location.href = `/transfers/${no}/edit`;
+}
+</script>
+
+</body>
+</html>

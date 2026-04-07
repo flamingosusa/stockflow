@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Check Stock</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+<style>
+/* ===== Base ===== */
+body {
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    background: linear-gradient(to bottom, #1E3A8A, #4A90E2);
+    min-height: 100vh;
+    padding: 40px 20px;
+    color: #fff;
+}
+
+/* ===== Card Layout ===== */
+.card {
+    max-width: 1200px;
+    margin: auto;
+    background: linear-gradient(to bottom, #357ABD, #4A90E2);
+    border-radius: 14px;
+    padding: 30px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.35);
+}
+
+/* ===== Header ===== */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.header h2 {
+    margin: 0;
+}
+
+.back-btn {
+    background: rgba(255,255,255,0.9);
+    color: #357ABD;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.back-btn:hover {
+    background: #357ABD;
+    color: #fff;
+}
+
+/* ===== Lookup/Search ===== */
+.lookup-box {
+    background: rgba(255,255,255,0.12);
+    padding: 16px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+}
+
+.lookup-box select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+}
+
+/* ===== Layout ===== */
+.content {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 25px;
+}
+
+/* ===== Stock Summary ===== */
+.stock-summary {
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.stock-summary h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.stock-count {
+    font-size: 48px;
+    font-weight: bold;
+}
+
+.last-movement {
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+/* Stock color coding */
+.stock-green { color: #4ade80; }
+.stock-yellow { color: #facc15; }
+.stock-red { color: #f87171; }
+
+/* Transaction colors */
+.qty-in { color: #1e8e3e; font-weight: bold; }
+.qty-out { color: #d93025; font-weight: bold; }
+.type-in { color: #1e8e3e; }
+.type-out { color: #d93025; }
+
+/* ===== Transactions Table ===== */
+.items {
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.items h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+}
+
+th {
+    background: rgba(0,0,0,0.25);
+    color: #fff;
+}
+
+tbody td {
+    color: #357ABD;
+}
+
+tbody tr:nth-child(odd) {
+    background: rgba(255,255,255,0.08);
+}
+
+tbody tr:nth-child(even) {
+    background: rgba(255,255,255,0.18);
+}
+
+tbody tr:hover {
+    background: rgba(255,255,255,0.3);
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+<div class="card">
+    <div class="header">
+        <h2>🔍 Check Stock</h2>
+        <button class="back-btn" onclick="location.href='/'">⬅ Dashboard</button>
+    </div>
+
+    <div class="lookup-box">
+        <select id="searchInput"></select>
+    </div>
+
+    <div class="content">
+        <div class="stock-summary">
+            <h3>Stock Summary</h3>
+            <div class="stock-count stock-green" id="stockCount">0</div>
+            <div class="last-movement" id="lastMovement">Last Movement: N/A</div>
+        </div>
+
+        <div class="items">
+            <h3>Transactions</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Qty</th>
+                        <th>Transaction</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+    
+<script>
+function formatDate(dateStr) {
+    if(!dateStr) return "N/A";
+    const date = new Date(dateStr);
+    if(isNaN(date)) return dateStr;
+    return date.toLocaleDateString("en-US", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+// Load search options with item | description | color
+async function loadSearchOptions() {
+    try {
+        const res = await fetch("/api/stock/options/item");
+        if(!res.ok) throw new Error("Failed to load items");
+        const options = await res.json();
+        const select = document.getElementById("searchInput");
+        select.innerHTML = `<option value="">Select item</option>`;
+        options.forEach(o => {
+            const opt = document.createElement("option");
+            opt.value = o.value;
+            opt.textContent = `${o.item} | ${o.description ?? ""} | ${o.color ?? ""}`;
+            select.appendChild(opt);
+        });
+        select.addEventListener("change", () => { if(select.value) searchStock(); });
+    } catch (err) {
+        console.error(err);
+        alert("Failed to load item list");
+    }
+}
+
+async function searchStock() {
+    const term = document.getElementById("searchInput").value;
+    if(!term) return;
+
+    try {
+        const res = await fetch(`/api/stock/item?q=${encodeURIComponent(term)}`);
+        if(!res.ok) throw new Error("Error fetching stock");
+
+        const data = await res.json();
+
+        // Update stock count
+        const stockEl = document.getElementById("stockCount");
+        stockEl.textContent = data.total ?? 0;
+        stockEl.classList.remove("stock-green","stock-yellow","stock-red");
+        if(data.total <= 0) stockEl.classList.add("stock-red");
+        else if(data.total <= 2) stockEl.classList.add("stock-yellow");
+        else stockEl.classList.add("stock-green");
+
+        // Update last movement
+        const lastEl = document.getElementById("lastMovement");
+        if(data.transactions && data.transactions.length > 0) {
+            const last = data.transactions[0];
+            lastEl.textContent = `Last Movement: ${last.type ?? ""} - ${formatDate(last.date)}`;
+        } else lastEl.textContent = "Last Movement: N/A";
+
+        // Populate transactions table with color coding
+        const tbody = document.getElementById("transactionsTable");
+        tbody.innerHTML = "";
+
+        if(data.transactions && data.transactions.length > 0) {
+            data.transactions.forEach(tx => {
+                const tr = document.createElement("tr");
+
+                let qtyClass = "qty-in";
+                let typeClass = "type-in";
+                let sign = "+";
+                if(tx.type === "OUT" || tx.type === "SALE") {
+                    qtyClass = "qty-out";
+                    typeClass = "type-out";
+                    sign = "-";
+                }
+
+                // Show invoice number if present, else notes
+                const transactionText = (tx.type === "OUT" || tx.type === "SALE") && tx.invoice_number 
+                                        ? `Invoice #${tx.invoice_number}` 
+                                        : tx.notes ?? "";
+
+                tr.innerHTML = `
+                    <td>${formatDate(tx.date)}</td>
+                    <td class="${typeClass}">${tx.type}</td>
+                    <td class="${qtyClass}">${sign}${tx.qty}</td>
+                    <td>${transactionText}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td colspan="4" style="text-align:center;">No transactions found</td>`;
+            tbody.appendChild(tr);
+        }
+
+    } catch (err) {
+        console.error(err);
+        alert("Failed to fetch stock");
+    }
+}
+
+document.addEventListener("DOMContentLoaded", loadSearchOptions);
+document.addEventListener("input", function(e) {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+        if (e.target.type === "text" || e.target.tagName === "TEXTAREA") {
+            e.target.value = e.target.value.toUpperCase();
+        }
+    }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sales Dashboard</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+<style>
+/* =========================
+STATUS BADGES
+========================= */
+.badge-completed { background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; }
+.badge-cancelled { background-color: #ffc107; color: black; padding: 4px 8px; border-radius: 4px; }
+.badge-pending { background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; }   
+
+/* =========================
+DASHBOARD CARDS
+========================= */
+.dashboard-cards{
+    display:flex;
+    gap:20px;
+    padding:15px 20px;
+    flex-wrap:wrap;
+}
+
+.card{
+    background:white;
+    border-radius:8px;
+    padding:15px;
+    width:180px;
+    box-shadow:0 3px 8px rgba(0,0,0,0.12);
+}
+
+.card h3{
+    margin:0;
+    font-size:28px;
+    color:#2c3e50;
+}
+
+.card p{
+    margin:5px 0 0;
+    font-size:13px;
+    color:#666;
+}
+
+/* Small lot cards */
+.lot-cards{
+    display:flex;
+    gap:20px;
+    padding:10px 20px;
+    flex-wrap:wrap;
+    margin-top:15px;
+}
+
+.lot-card{
+    background: linear-gradient(135deg, #1E3A8A, #0F172A);
+    border-radius:8px;
+    padding:10px;
+    width:180px;
+    height:35px; /* half height of regular cards */
+    box-shadow:0 3px 8px rgba(0,0,0,0.12);
+}
+
+.lot-card h4{
+    margin:0;
+    font-size:18px;
+    color:white;
+}
+
+.lot-card p{
+    margin:5px 0 0;
+    font-size:12px;
+    color:white;
+}
+
+/* Dashboard Table */
+table.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    background-color: #f9fafb;
+}
+
+table.dashboard-table th, table.dashboard-table td {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 14px;
+}
+
+table.dashboard-table th {
+    background-color: #357ABD;
+    color: #fff;
+    font-weight: 600;
+}
+
+table.dashboard-table tbody tr:nth-child(odd) {
+    background-color: #e6f0fa;
+}
+
+table.dashboard-table tbody tr:nth-child(even) {
+    background-color: #ffffff;
+}
+
+table.dashboard-table tbody tr:hover {
+    background-color: #d0e3f9;
+    cursor: pointer;
+}
+
+table.dashboard-table td.actions select {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Search input */
+#searchInput{
+    padding:6px 12px;
+    border-radius:5px;
+    border:1px solid #ccc;
+    width:220px;
+    margin-left:20px;
+}
+    
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); }
+.modal-content { background:#357ABD; color:#fff; width:90%; margin:3% auto; padding:20px; border-radius:10px; }
+.close { float:right; cursor:pointer; }
+.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:15px; }
+.toggle-btn.active { background:#fff; color:#357ABD; }
+    
+</style>
+</head>
+<body>
+
+<header class="app-header">
+    <div class="logo-container">
+        <img src="{{ url_for('static', filename='images/stockflow logo.png') }}" alt="StockFlow Logo" class="logo"/>
+        <div class="logo-text">
+            <span class="app-subtitle">
+                StockFlow<br> Sales Dashboard
+                
+            </span>
+        </div>
+    </div>
+</header>
+
+<nav class="main-menu">
+    <a href="/" class="menu-item">Inventory Dashboard</a>
+    <a href="/reports/sales-dashboard" class="menu-item active">Sales Dashboard</a>
+    <a href="/sales" class="menu-item">New Sale</a>
+    <a href="/review-sales">Edit Sale</a>
+</nav>
+
+<div style="padding:10px 20px;">
+    <input type="text" id="searchInput" placeholder="Search by invoice number...">
+</div>
+
+<div class="dashboard-cards">
+    <div class="card"><h3 id="cardTotalSales">0</h3><p>Total Sales</p></div>
+    <div class="card"><h3 id="cardRevenue">$0</h3><p>Total Revenue</p></div>
+    <div class="card"><h3 id="cardDelivery">$0</h3><p>Delivery Revenue</p></div>
+    <div class="card"><h3 id="cardAvgInvoice">$0</h3><p>Average Invoice</p></div>
+    <div class="card"><h3 id="cardMostSold">N/A</h3><p>Most Sold Item</p></div>
+</div>
+
+<div class="lot-cards">
+    <div class="lot-card"><h4 id="cardALOT">$0</h4><p>ALOT Sales</p></div>
+    <div class="lot-card"><h4 id="cardBLOT">$0</h4><p>BLOT Sales</p></div>
+    <div class="lot-card"><h4 id="cardCLOT">$0</h4><p>CLOT Sales</p></div>
+</div>
+
+<table class="dashboard-table">
+<thead>
+<tr>
+    <th>Invoice</th>
+    <th>Customer</th>
+    <th>Date</th>
+    <th>Delivery Fee</th>
+    <th>Total Items</th>
+    <th>Total Amount</th>
+    <th>Status</th>
+    <th>Actions</th>
+</tr>
+</thead>
+<tbody id="sales-body">
+<tr><td colspan="8">Loading sales...</td></tr>
+</tbody>
+</table>
+
+<script>
+async function loadSales(){
+    const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
+    const res = await fetch("/reports/sales/list");
+    const sales = await res.json();
+
+    // =========================
+    // Filter active sales for metrics
+    // =========================
+    const activeSales = sales.filter(s => s.status.toUpperCase() !== "CANCELLED");
+
+    const totalSales = activeSales.length;
+    const totalRevenue = activeSales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
+    const deliveryRevenue = activeSales.reduce((sum, s) => sum + Number(s.delivery_fee || 0), 0);
+    const avgInvoice = totalSales ? (totalRevenue / totalSales).toFixed(2) : 0;
+
+    // Most sold item (only active)
+    const itemCounts = {};
+    activeSales.forEach(s => {
+        s.items?.forEach(it=>{
+            if(!itemCounts[it.item]) itemCounts[it.item]=0;
+            itemCounts[it.item]+=Number(it.qty);
+        });
+    });
+    let mostSold = "N/A";
+    if(Object.keys(itemCounts).length>0){
+        mostSold = Object.entries(itemCounts).sort((a,b)=>b[1]-a[1])[0][0];
+    }
+
+    document.getElementById("cardTotalSales").textContent = totalSales;
+    document.getElementById("cardRevenue").textContent = `$${totalRevenue.toFixed(2)}`;
+    document.getElementById("cardDelivery").textContent = `$${deliveryRevenue.toFixed(2)}`;
+    document.getElementById("cardAvgInvoice").textContent = `$${avgInvoice}`;
+    document.getElementById("cardMostSold").textContent = mostSold;
+
+    // Lot cards
+    const lotSales = {ALOT:0,BLOT:0,CLOT:0};
+    activeSales.forEach(s=>{
+        s.items?.forEach(it=>{
+            const lot = it.lot_type || "ALOT";
+            if(lotSales[lot] !== undefined){
+                lotSales[lot] += Number(it.line_total || 0);
+            }
+        });
+    });
+    document.getElementById("cardALOT").textContent = `$${lotSales.ALOT.toFixed(2)}`;
+    document.getElementById("cardBLOT").textContent = `$${lotSales.BLOT.toFixed(2)}`;
+    document.getElementById("cardCLOT").textContent = `$${lotSales.CLOT.toFixed(2)}`;
+
+    // =========================
+    // Populate table
+    // =========================
+    const tbody = document.getElementById("sales-body");
+    tbody.innerHTML = "";
+    const filtered = sales.filter(s => !search || s.invoice.toLowerCase().includes(search));
+            // Sort: Pending first, then Completed, then Cancelled
+    const statusOrder = { "Pending": 1, "Completed": 2, "Cancelled": 3 };
+    filtered.sort((a, b) => (statusOrder[a.status] || 4) - (statusOrder[b.status] || 4));
+    filtered.forEach(s=>{
+        let statusClass = "";
+        if(s.status.toUpperCase()==="COMPLETED") statusClass="badge-completed";
+        else if(s.status.toUpperCase()==="CANCELLED") statusClass="badge-cancelled";
+        else statusClass="badge-pending";
+
+        const tr = document.createElement("tr");
+        tr.innerHTML=`
+        <td>${s.invoice}</td>
+        <td>${s.customer}</td>
+        <td>${s.date || ""}</td>
+        <td>$${s.delivery_fee || 0}</td>
+        <td>${s.total_items}</td>
+        <td>$${s.total_amount}</td>
+        <td><span class="${statusClass}">${s.status}</span></td>
+        <td>
+          <select onchange="updateStatus(${s.id}, this.value)" ${s.status==='Cancelled'?'disabled':''}>
+            <option value="Pending" ${s.status==='Pending'?'selected':''}>Pending</option>
+            <option value="Completed" ${s.status==='Completed'?'selected':''}>Completed</option>
+            <option value="Cancelled" ${s.status==='Cancelled'?'selected':''}>Cancelled</option>
+          </select>
+        </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Update status function
+async function updateStatus(saleId, newStatus){
+    try {
+        const res = await fetch(`/api/sales/${saleId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        if(res.ok){
+            loadSales();
+        } else {
+            alert('Failed to update status');
+        }
+    } catch(err) {
+        console.error(err);
+        alert('Error updating status');
+    }
+}
+
+// Open review/edit modal (kept for future use)
+function openEditModal(saleId){
+    window.location.href = `/review-sales/${saleId}`;
+}
+
+const searchInput = document.getElementById("searchInput");
+if(searchInput){
+    searchInput.addEventListener("input", ()=>{
+        clearTimeout(window.searchTimer);
+        window.searchTimer = setTimeout(loadSales,300);
+    });
+}
+let products = [];
+
+async function loadProducts() {
+    const res = await fetch("/api/products");
+    products = await res.json();
+}
+
+function closeModal(){
+    document.getElementById("editModal").style.display="none";
+}
+
+function setSaleType(btn){
+    document.querySelectorAll(".toggle-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("saleType").value = btn.dataset.value;
+}
+    
+document.addEventListener("DOMContentLoaded", loadSales);
+</script>
+
+<!-- EDIT SALE MODAL -->
+<div class="modal" id="editModal">
+<div class="modal-content">
+    <span class="close" onclick="closeModal()">✖</span>
+    <h2>Edit Sale</h2>
+    <form id="editForm">
+        <input type="hidden" id="saleId">
+
+        <div class="grid">
+            <div><label>Invoice #</label><input type="text" id="invoice_number" readonly></div>
+            <div><label>Sale Date</label><input type="date" id="sale_date"></div>
+            <div><label>Delivery Date</label><input type="date" id="delivery_date"></div>
+            <div><label>Customer</label><input type="text" id="customer_name"></div>
+            <div><label>Email</label><input type="email" id="email"></div>
+            <div><label>Address</label><input type="text" id="address"></div>
+            <div><label>Phone 1</label><input type="text" id="phone1"></div>
+            <div><label>Phone 2</label><input type="text" id="phone2"></div>
+
+            <div>
+                <label>Sale Type</label>
+                <div>
+                    <button type="button" class="toggle-btn" data-value="Delivery" onclick="setSaleType(this)">Delivery</button>
+                    <button type="button" class="toggle-btn" data-value="Pickup" onclick="setSaleType(this)">Pickup</button>
+                </div>
+                <input type="hidden" id="saleType">
+            </div>
+
+            <div><label>Salesperson</label><input type="text" id="salesperson"></div>
+
+            <div>
+                <label>Status</label>
+                <select id="status">
+                    <option>Pending</option>
+                    <option>Completed</option>
+                    <option>Cancelled</option>
+                </select>
+            </div>
+
+            <div><label>Notes</label><textarea id="notes"></textarea></div>
+        </div>
+
+        <table id="productsTable">
+        <thead>
+        <tr>
+        <th>Item</th><th>Vendor</th><th>Description</th><th>SKU</th>
+        <th>Color</th><th>Qty</th><th>Price</th><th>Total</th><th></th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+        </table>
+
+        <button type="button" onclick="addRow()">+ Add Product</button>
+
+        <div>
+            <label>Tax %</label>
+            <input type="number" id="taxPercent" value="0">
+
+            <label>Delivery Fee</label>
+            <input type="number" id="deliveryFee" value="0">
+        </div>
+
+        <h3>Total: $<span id="invoiceTotal">0.00</span></h3>
+
+        <button type="submit">Save Changes</button>
+    </form>
+</div>
+</div>
+
+</body>
+</html>

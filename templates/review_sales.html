@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Review / Edit Sales</title>
+<style>
+body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(to bottom, #1E3A8A,#4A90E2); min-height:100vh; padding:40px 20px; color:#fff; }
+.card { max-width:1200px; margin:auto; background:linear-gradient(to bottom,#357ABD,#4A90E2); border-radius:14px; padding:30px; box-shadow:0 15px 40px rgba(0,0,0,0.35); }
+.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.lookup-box { background: rgba(255,255,255,0.12); padding:10px; border-radius:10px; margin-bottom:20px; }
+table { width:100%; border-collapse:collapse; border-radius:10px; overflow:hidden; }
+th,td { padding:10px; }
+th { background:rgba(0,0,0,0.25); }
+tbody tr:nth-child(odd){background:rgba(255,255,255,0.08);}
+tbody tr:nth-child(even){background:rgba(255,255,255,0.18);}
+button { padding:6px 12px; border-radius:6px; border:none; cursor:pointer; }
+.back-btn { background: rgba(255,255,255,0.9); color:#357ABD; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; cursor:pointer; }
+.back-btn:hover { background:#357ABD; color:#fff; }
+/* modal */
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); }
+.modal-content { background:#357ABD; color:#fff; width:95%; max-width:1200px; margin:3% auto; padding:20px; border-radius:12px; max-height:90vh; overflow-y:auto; }
+.close { cursor:pointer; font-size:20px; float:right; }
+input, textarea, select { width:90%; padding:6px; border-radius:6px; border:none; }
+label { font-weight:bold; }
+.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.btn { padding: 8px 14px; border-radius:6px; border:none; cursor:pointer; font-weight:bold; }
+.btn-add { background:#fff; color:#357ABD; margin-top:15px; }
+.btn-remove { background:#ef4444; color:#fff; }
+.total-box { text-align:right; margin-top:20px; font-size:20px; font-weight:bold; }
+.actions { text-align:center; margin-top:30px; }
+.submit { width:50%; padding:14px; background:#fff; color:#357ABD; font-weight:bold; border-radius:8px; cursor:pointer; }
+.modal-content::-webkit-scrollbar { width:0; height:0; }
+.modal-content { scrollbar-width:none; -ms-overflow-style:none; }
+</style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header">
+        <h2>🧾 Review / Edit Sales</h2>
+        <button class="back-btn" onclick="location.href='/reports/sales-dashboard'">⬅Back to Sales Dashboard</button>
+    </div>
+
+    <div class="lookup-box">
+        <input id="searchBox" placeholder="Search invoice, customer, phone">
+        <button onclick="loadSales()">Search</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Phone</th><th>Total</th><th>Action</th></tr>
+        </thead>
+        <tbody id="salesTable"></tbody>
+    </table>
+</div>
+
+<!-- EDIT SALE MODAL -->
+<div class="modal" id="editModal">
+<div class="modal-content">
+    <span class="close" onclick="closeModal()">✖</span>
+    <h2>Edit Sale</h2>
+    <form id="editForm">
+        <input type="hidden" id="saleId">
+
+        <div class="grid">
+            <div><label>Invoice #</label><input type="text" id="invoice_number" readonly></div>
+            <div><label>Sale Date</label><input type="date" id="sale_date"></div>
+            <div><label>Delivery / Pickup Date</label><input type="date" id="delivery_date"></div>
+            <div><label>Customer Name</label><input type="text" id="customer_name"></div>
+            <div><label>Email</label><input type="email" id="email"></div>
+            <div><label>Address</label><input type="text" id="address"></div>
+            <div><label>Phone #1</label><input type="text" id="phone1"></div>
+            <div><label>Phone #2</label><input type="text" id="phone2"></div>
+            <div>
+                <label>Sale Type</label>
+                <div class="toggle-group">
+                    <button type="button" class="toggle-btn" data-value="Delivery" onclick="setSaleType(this)">Delivery</button>
+                    <button type="button" class="toggle-btn" data-value="Pickup" onclick="setSaleType(this)">Pickup</button>
+                </div>
+                <input type="hidden" id="saleType">
+            </div>
+            <div><label>Salesperson</label><input type="text" id="salesperson"></div>
+            <div>
+                <label>Status</label>
+                <select id="status">
+                    <option>Pending</option>
+                    <option>Completed</option>
+                    <option>Cancelled</option>
+                </select>
+            </div>
+            <div><label>Notes</label><textarea id="notes" rows="2"></textarea></div>
+        </div>
+
+        <table id="productsTable">
+        <thead>
+        <tr><th>Item</th><th>Vendor</th><th>Description</th><th>SKU</th><th>Color</th><th>Qty</th><th>Price</th><th>Total</th><th>Actions</th></tr>
+        </thead>
+        <tbody></tbody>
+        </table>
+        <button type="button" class="btn btn-add" onclick="addRow()">+ Add Product</button>
+
+        <div class="grid" style="margin-top:20px;">
+            <div><label>Tax %</label><input type="number" id="taxPercent" value="0" step="0.01" min="0"></div>
+            <div><label>Delivery Fee</label><input type="number" id="deliveryFee" value="0" step="0.01" min="0"></div>
+        </div>
+
+        <div class="total-box">Invoice Total: $<span id="invoiceTotal">0.00</span></div>
+        <div class="actions"><button type="submit" class="submit">Save Changes</button></div>
+    </form>
+</div>
+</div>
+
+<script>
+let products = [];
+let searchTimeout;
+
+// LIVE SEARCH (🔥 THIS IS THE UPGRADE)
+document.getElementById("searchBox").addEventListener("input", function () {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        loadSales();
+    }, 300);
+});
+
+async function loadProducts() {
+    const res = await fetch("/api/products");
+    products = await res.json();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadProducts();
+    loadSales();
+});
+
+async function loadSales() {
+    const searchBox = document.getElementById("searchBox");
+    const q = encodeURIComponent(searchBox.value || "");
+    const res = await fetch(`/api/sales/lookup?q=${q}`);
+    const data = await res.json();
+    const tbody = document.getElementById("salesTable");
+    tbody.innerHTML = "";
+    data.forEach(s => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+        <td>${s.invoice_number}</td>
+        <td>${s.sale_date}</td>
+        <td>${s.customer_name}</td>
+        <td>${s.phone1 || ""}</td>
+        <td>$${Number(s.total || 0).toFixed(2)}</td>
+        <td><button onclick="editSale(${s.id})">Edit</button></td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+// EVERYTHING BELOW UNTOUCHED
+async function editSale(id){
+    const res = await fetch(`/api/sales/${id}`);
+    const data = await res.json();
+    const s = data.sale;
+
+    document.getElementById("saleId").value = s.id;
+    document.getElementById("invoice_number").value = s.invoice_number;
+    document.getElementById("sale_date").value = s.sale_date;
+    document.getElementById("delivery_date").value = s.delivery_date;
+    document.getElementById("customer_name").value = s.customer_name;
+    document.getElementById("email").value = s.email;
+    document.getElementById("address").value = s.address;
+    document.getElementById("phone1").value = s.phone1;
+    document.getElementById("phone2").value = s.phone2;
+    document.getElementById("saleType").value = s.sale_type;
+    document.getElementById("salesperson").value = s.salesperson;
+    document.getElementById("status").value = s.status;
+    document.getElementById("notes").value = s.notes;
+    document.getElementById("taxPercent").value = s.tax_percent || 0;
+    document.getElementById("deliveryFee").value = s.delivery_fee || 0;
+
+    document.querySelectorAll(".toggle-btn").forEach(b=>{
+        b.classList.remove("active");
+        if(b.dataset.value===s.sale_type) b.classList.add("active");
+    });
+
+    const tbody = document.querySelector("#productsTable tbody");
+    tbody.innerHTML = "";
+    data.items.forEach(i=>{
+        const row = document.createElement("tr");
+        row.innerHTML = `
+        <td><select onchange="fillProduct(this)"><option value="${i.product_id}" selected>${i.item}</option></select></td>
+        <td><input readonly value="${i.vendor||''}"></td>
+        <td><input readonly value="${i.description||''}"></td>
+        <td><input readonly value="${i.sku||''}"></td>
+        <td><input readonly value="${i.color||''}"></td>
+        <td><input type="number" min="1" value="${i.qty}" oninput="calc()"></td>
+        <td><input type="number" step="0.01" value="${i.price}" oninput="calc()"></td>
+        <td class="line-total">0.00</td>
+        <td><button type="button" class="btn btn-remove" onclick="this.closest('tr').remove();calc()">X</button></td>`;
+        tbody.appendChild(row);
+    });
+
+    calc();
+    document.getElementById("editModal").style.display="block";
+}
+
+function closeModal(){ document.getElementById("editModal").style.display="none"; }
+
+function setSaleType(btn){
+    document.querySelectorAll(".toggle-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("saleType").value = btn.dataset.value;
+}
+
+function addRow(){
+    const row = document.createElement("tr");
+    const options = products.map(p=>`<option value="${p.id}" data-vendor="${p.vendor||''}" data-sku="${p.sku}" data-description="${p.description||''}" data-color="${p.color}" data-price="${p.sale_price||0}">${p.item}</option>`).join("");
+    row.innerHTML = `
+    <td><select onchange="fillProduct(this)"><option value="">Select product</option>${options}</select></td>
+    <td><input readonly></td><td><input readonly></td><td><input readonly></td><td><input readonly></td>
+    <td><input type="number" min="1" value="1" oninput="calc()"></td>
+    <td><input type="number" step="0.01" value="0" oninput="calc()"></td>
+    <td class="line-total">0.00</td>
+    <td><button type="button" class="btn btn-remove" onclick="this.closest('tr').remove();calc()">X</button></td>`;
+    document.querySelector("#productsTable tbody").appendChild(row);
+}
+
+function fillProduct(select){
+    const opt = select.selectedOptions[0];
+    const row = select.closest("tr");
+    row.children[1].children[0].value = opt.dataset.vendor||'';
+    row.children[2].children[0].value = opt.dataset.description||'';
+    row.children[3].children[0].value = opt.dataset.sku||'';
+    row.children[4].children[0].value = opt.dataset.color||'';
+    row.children[6].children[0].value = opt.dataset.price||0;
+    calc();
+}
+
+function calc(){
+    let subtotal=0;
+    document.querySelectorAll("#productsTable tbody tr").forEach(row=>{
+        const qty = Number(row.children[5].children[0].value||0);
+        const price = Number(row.children[6].children[0].value||0);
+        const line = qty*price;
+        row.children[7].textContent=line.toFixed(2);
+        subtotal+=line;
+    });
+    const tax = Number(document.getElementById("taxPercent").value||0);
+    const delivery = Number(document.getElementById("deliveryFee").value||0);
+    const total = subtotal + subtotal*tax/100 + delivery;
+    document.getElementById("invoiceTotal").textContent=total.toFixed(2);
+}
+
+document.getElementById("taxPercent").oninput = calc;
+document.getElementById("deliveryFee").oninput = calc;
+
+document.getElementById("editForm").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const saleId = document.getElementById("saleId").value;
+    const sale = {
+        sale_date: document.getElementById("sale_date").value,
+        delivery_date: document.getElementById("delivery_date").value,
+        customer_name: document.getElementById("customer_name").value,
+        email: document.getElementById("email").value,
+        address: document.getElementById("address").value,
+        phone1: document.getElementById("phone1").value,
+        phone2: document.getElementById("phone2").value,
+        sale_type: document.getElementById("saleType").value,
+        salesperson: document.getElementById("salesperson").value,
+        status: document.getElementById("status").value,
+        notes: document.getElementById("notes").value,
+        tax_percent: Number(document.getElementById("taxPercent").value||0),
+        delivery_fee: Number(document.getElementById("deliveryFee").value||0),
+        total: Number(document.getElementById("invoiceTotal").textContent),
+        items:[]
+    };
+    document.querySelectorAll("#productsTable tbody tr").forEach(row=>{
+        sale.items.push({
+            product_id: row.children[0].children[0].value,
+            item: row.children[0].children[0].selectedOptions[0].text,
+            vendor: row.children[1].children[0].value,
+            description: row.children[2].children[0].value,
+            sku: row.children[3].children[0].value,
+            color: row.children[4].children[0].value,
+            qty: Number(row.children[5].children[0].value),
+            price: Number(row.children[6].children[0].value),
+            line_total: Number(row.children[7].textContent)
+        });
+    });
+    const res = await fetch(`/api/sales/${saleId}`, {
+        method:"PATCH",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(sale)
+    });
+    if(res.ok){ alert("✅ Sale updated"); closeModal(); loadSales(); }
+    else{ alert("❌ Error updating sale"); }
+});
+
+document.addEventListener("input", function(e) {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+        if (e.target.type === "text" || e.target.tagName === "TEXTAREA") {
+            e.target.value = e.target.value.toUpperCase();
+        }
+    }
+});
+</script>
+</body>
+</html>
