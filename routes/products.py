@@ -61,8 +61,8 @@ def get_products():
             for r in rows
         ])
     except Exception as e:
-        print("GET PRODUCTS ERROR:", e)
-        return jsonify({"error": "Failed to fetch products"}), 500
+    print("GET PRODUCTS ERROR:", str(e))
+    return jsonify({"error": str(e)}), 500
     finally:
         cur.close()
         conn.close()
