@@ -4,6 +4,7 @@ from db import get_db_connection
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
+
 @dashboard_bp.route("/api/dashboard", methods=["GET"])
 def dashboard():
     warehouse = request.args.get("warehouse")
@@ -11,90 +12,96 @@ def dashboard():
     status_filter = request.args.get("status")
 
     conn = get_db_connection()
-    cur = conn.cursor()  # must be RealDictCursor from your db.py
+    cur = conn.cursor()
 
-    query = """
-        SELECT 
-            p.id,
-            p.sku,
-            p.item,
-            p.vendor,
-            p.color,
-            p.whs_location,
-            p.lot_type,
-            p.description,
-            COALESCE(SUM(
-                CASE
-                    WHEN m.movement_type = 'IN' THEN m.quantity
-                    WHEN m.movement_type = 'OUT' THEN -m.quantity
-                    WHEN m.movement_type = 'ADJUST' THEN m.quantity
-                    ELSE 0
-                END
-            ), 0) AS stock
-        FROM products p
-        LEFT JOIN inventory_movements m 
-            ON p.id = m.product_id
-    """
+    try:
+        query = """
+            SELECT 
+                p.id,
+                p.sku,
+                p.item,
+                p.vendor,
+                p.color,
+                p.whs_location,
+                p.lot_type,
+                p.description,
+                COALESCE(SUM(
+                    CASE
+                        WHEN m.movement_type = 'IN' THEN m.quantity
+                        WHEN m.movement_type = 'OUT' THEN -m.quantity
+                        WHEN m.movement_type = 'ADJUST' THEN m.quantity
+                        ELSE 0
+                    END
+                ), 0) AS stock
+            FROM products p
+            LEFT JOIN inventory_movements m 
+                ON p.id = m.product_id
+        """
 
-    filters = []
-    params = []
+        filters = []
+        params = []
 
-    if warehouse:
-        filters.append("p.whs_location = %s")
-        params.append(warehouse)
+        if warehouse:
+            filters.append("p.whs_location = %s")
+            params.append(warehouse)
 
-    if vendor:
-        filters.append("p.vendor = %s")
-        params.append(vendor)
+        if vendor:
+            filters.append("p.vendor = %s")
+            params.append(vendor)
 
-    if filters:
-        query += " WHERE " + " AND ".join(filters)
+        if filters:
+            query += " WHERE " + " AND ".join(filters)
 
-    query += """
-        GROUP BY 
-            p.id, p.sku, p.item, p.vendor, p.color,
-            p.whs_location, p.lot_type, p.description
-        ORDER BY p.item
-    """
+        query += """
+            GROUP BY 
+                p.id, p.sku, p.item, p.vendor, p.color,
+                p.whs_location, p.lot_type, p.description
+            ORDER BY p.item
+        """
 
-    cur.execute(query, tuple(params))
-    rows = cur.fetchall()
+        cur.execute(query, tuple(params))
+        rows = cur.fetchall()
 
-    cur.close()
-    conn.close()
+        result = []
 
-    result = []
+        for r in rows:
+            # FIX: tuple-safe indexing
+            stock = r[8]
 
-    for r in rows:
-        stock = r["stock"]
+            # Status logic
+            if stock <= 0:
+                status = "OUT"
+                badge = "badge-out"
+            elif stock <= 2:
+                status = "LOW"
+                badge = "badge-low"
+            else:
+                status = "IN STOCK"
+                badge = "badge-ok"
 
-        # Status logic
-        if stock <= 0:
-            status = "OUT"
-            badge = "badge-out"
-        elif stock <= 2:
-            status = "LOW"
-            badge = "badge-low"
-        else:
-            status = "IN STOCK"
-            badge = "badge-ok"
+            if status_filter and status != status_filter:
+                continue
 
-        # Apply status filter if provided
-        if status_filter and status != status_filter:
-            continue
+            result.append({
+                "id": r[0],
+                "sku": r[1],
+                "item": r[2],
+                "vendor": r[3],
+                "color": r[4],
+                "whs_location": r[5],
+                "lot_type": r[6],
+                "description": r[7],
+                "stock": stock,
+                "status": status,
+                "status_class": badge
+            })
 
-        result.append({
-            "id": r["id"],
-            "sku": r["sku"],
-            "item": r["item"],
-            "vendor": r["vendor"],
-            "color": r["color"],
-            "whs_location": r["whs_location"],
-            "lot_type": r["lot_type"],
-            "description": r["description"],
-            "stock": stock,
-            "status": status,
-            "status_class": badge
-        })
+        return jsonify(result)
 
-    return jsonify(result)
+    except Exception as e:
+        print("[dashboard] DB error:", e)
+        return jsonify({"error": "Dashboard failed"}), 500
+
+    finally:
+        cur.close()
+        conn.close()
