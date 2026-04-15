@@ -5,18 +5,21 @@ from datetime import datetime
 
 stock_bp = Blueprint("stock_bp", __name__, url_prefix="/api/stock")
 
+
 # -------------------------
-# Get available stock for a product (with invoice numbers for sales)
+# Get available stock for a product
 # -------------------------
 @stock_bp.route("/item", methods=["GET"])
 def get_stock_by_item():
     product_id = request.args.get("q", type=int)
+
     if not product_id:
         return jsonify({"error": "Missing product_id"}), 400
 
     conn = get_db_connection()
+    cur = conn.cursor()
+
     try:
-        cur = conn.cursor()
         # Total stock
         cur.execute("""
             SELECT COALESCE(SUM(
@@ -30,55 +33,65 @@ def get_stock_by_item():
             FROM inventory_movements
             WHERE product_id = %s
         """, (product_id,))
-        total_row = cur.fetchone()
-        total = total_row["total"] if total_row and "total" in total_row else 0
 
-        # Transactions - newest first
+        total_row = cur.fetchone()
+        total = total_row[0] if total_row else 0
+
+        # Transactions
         cur.execute("""
             SELECT id, movement_type, quantity, created_at, notes, invoice_number
             FROM inventory_movements
             WHERE product_id = %s
             ORDER BY created_at DESC
         """, (product_id,))
+
         rows = cur.fetchall()
 
         transactions = []
         for r in rows:
             transactions.append({
-                "id": r["id"],
-                "type": r["movement_type"],
-                "qty": r["quantity"],
-                "date": r["created_at"].isoformat() if isinstance(r["created_at"], datetime) else r["created_at"],
-                "notes": r["notes"] or "",
-                "invoice_number": r["invoice_number"] or ""
+                "id": r[0],
+                "type": r[1],
+                "qty": r[2],
+                "date": r[3].isoformat() if isinstance(r[3], datetime) else r[3],
+                "notes": r[4] or "",
+                "invoice_number": r[5] or ""
             })
 
         return jsonify({
             "total": max(int(total), 0),
             "transactions": transactions
         })
+
+    except Exception as e:
+        print("[stock/item] DB error:", e)
+        return jsonify({"error": "Stock fetch failed"}), 500
+
     finally:
         cur.close()
         conn.close()
 
+
 # -------------------------
-# Update stock movement (lock negative stock)
+# Update stock movement
 # -------------------------
 @stock_bp.route("/update", methods=["POST"])
 def update_stock():
     data = request.get_json()
+
     product_id = data.get("product_id")
     qty_change = int(data.get("qty_change", 0))
-    movement_type = data.get("movement_type")  # 'IN', 'OUT', 'ADJUST'
-    related_id = data.get("related_id")  # optional
+    movement_type = data.get("movement_type")
+    related_id = data.get("related_id")
     notes = data.get("notes", "")
 
     if not product_id or not movement_type:
         return jsonify({"error": "Missing required fields"}), 400
 
     conn = get_db_connection()
+    cur = conn.cursor()
+
     try:
-        cur = conn.cursor()
         # Current stock
         cur.execute("""
             SELECT COALESCE(SUM(
@@ -92,11 +105,13 @@ def update_stock():
             FROM inventory_movements
             WHERE product_id = %s
         """, (product_id,))
+
         row = cur.fetchone()
-        current_qty = row["current_qty"] if row and "current_qty" in row else 0
+        current_qty = row[0] if row else 0
 
         # Calculate new stock
-        new_qty = current_qty + (qty_change if movement_type != 'OUT' else -qty_change)
+        new_qty = current_qty + (qty_change if movement_type != "OUT" else -qty_change)
+
         if new_qty < 0:
             return jsonify({"error": "Stock cannot go negative"}), 400
 
@@ -108,7 +123,16 @@ def update_stock():
         """, (product_id, movement_type, qty_change, notes, related_id))
 
         conn.commit()
-        return jsonify({"message": "Stock updated successfully", "new_qty": new_qty})
+
+        return jsonify({
+            "message": "Stock updated successfully",
+            "new_qty": new_qty
+        })
+
+    except Exception as e:
+        conn.rollback()
+        print("[stock/update] DB error:", e)
+        return jsonify({"error": "Stock update failed"}), 500
 
     finally:
         cur.close()
@@ -121,20 +145,33 @@ def update_stock():
 @stock_bp.route("/options/item", methods=["GET"])
 def stock_options_item():
     conn = get_db_connection()
+    cur = conn.cursor()
+
     try:
-        cur = conn.cursor()
-        cur.execute("SELECT id, item, description, color FROM products ORDER BY item")
+        cur.execute("""
+            SELECT id, item, description, color
+            FROM products
+            ORDER BY item
+        """)
+
         rows = cur.fetchall()
+
         options = [
             {
-                "value": r["id"],         # product ID
-                "item": r["item"],        # keep 'item' key for frontend
-                "description": r["description"] or "",
-                "color": r["color"] or ""
+                "value": r[0],
+                "item": r[1],
+                "description": r[2] or "",
+                "color": r[3] or ""
             }
             for r in rows
         ]
+
         return jsonify(options)
+
+    except Exception as e:
+        print("[stock/options/item] DB error:", e)
+        return jsonify({"error": "Failed to load items"}), 500
+
     finally:
         cur.close()
         conn.close()
