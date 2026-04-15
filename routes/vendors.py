@@ -4,6 +4,7 @@ from db import get_db_connection
 
 vendors_bp = Blueprint("vendors_bp", __name__, url_prefix="/api/vendors")
 
+
 # -------------------------
 # VENDOR FORM PAGE
 # -------------------------
@@ -18,16 +19,27 @@ def vendor_form():
 @vendors_bp.route("/", methods=["GET"])
 def get_vendors():
     conn = get_db_connection()
+    cur = conn.cursor()
+
     try:
-        cur = conn.cursor()
         cur.execute("SELECT code, name FROM vendors ORDER BY name")
         rows = cur.fetchall()
-        # Dict-style access for safety
-        result = [{"code": r["code"], "name": r["name"]} for r in rows]
+
+        # Tuple-safe mapping (works in production)
+        result = [
+            {
+                "code": r[0],
+                "name": r[1]
+            }
+            for r in rows
+        ]
+
         return jsonify(result)
+
     except Exception as e:
         print("[get_vendors] DB error:", e)
         return jsonify({"error": "Failed to fetch vendors"}), 500
+
     finally:
         cur.close()
         conn.close()
@@ -39,15 +51,23 @@ def get_vendors():
 @vendors_bp.route("/distinct", methods=["GET"])
 def fetch_distinct_vendors():
     conn = get_db_connection()
+    cur = conn.cursor()
+
     try:
-        cur = conn.cursor()
         cur.execute("SELECT DISTINCT vendor FROM products ORDER BY vendor")
         rows = cur.fetchall()
-        vendors = [{"vendor": r["vendor"]} for r in rows]
+
+        vendors = [
+            {"vendor": r[0]}
+            for r in rows
+        ]
+
         return jsonify(vendors)
+
     except Exception as e:
         print("[fetch_distinct_vendors] DB error:", e)
         return jsonify({"error": "Failed to fetch distinct vendors"}), 500
+
     finally:
         cur.close()
         conn.close()
@@ -59,24 +79,30 @@ def fetch_distinct_vendors():
 @vendors_bp.route("/add", methods=["POST"])
 def add_vendor():
     data = request.get_json()
+
     code = data.get("code")
     name = data.get("name")
+
     if not code or not name:
         return jsonify({"error": "Vendor code and name required"}), 400
 
     conn = get_db_connection()
+    cur = conn.cursor()
+
     try:
-        cur = conn.cursor()
         cur.execute(
             "INSERT INTO vendors (code, name) VALUES (%s, %s)",
             (code.upper(), name)
         )
+
         conn.commit()
         return jsonify({"message": "Vendor added successfully"})
+
     except Exception as e:
         print("[add_vendor] DB error:", e)
         conn.rollback()
         return jsonify({"error": str(e)}), 500
+
     finally:
         cur.close()
         conn.close()
