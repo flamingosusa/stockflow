@@ -10,6 +10,8 @@ from routes.vendors import vendors_bp
 from routes.stock import stock_bp
 from routes.movements import movements_bp
 from routes.sales_dashboard import sales_dashboard_bp
+from routes.floor_dashboard import floor_dashboard_bp
+from routes.sales_people import sales_people_bp
 
 app = Flask(__name__)
 
@@ -24,6 +26,8 @@ app.register_blueprint(transfers_bp)
 app.register_blueprint(vendors_bp)
 app.register_blueprint(stock_bp)
 app.register_blueprint(movements_bp, url_prefix="/api/movements")
+app.register_blueprint(floor_dashboard_bp)
+app.register_blueprint(sales_people_bp)
 
 if __name__ == "__main__":
     # Use environment variables if available, otherwise fallback to defaults
