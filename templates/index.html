@@ -7,14 +7,12 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 
 <style>
-/* ===== TABLE TIGHT ===== */
 .dashboard-table td,
 .dashboard-table th{
   padding:6px 10px;
   font-size:13px;
 }
 
-/* ===== EXPAND UX ===== */
 .expand-cell{
   cursor:pointer;
   font-weight:500;
@@ -23,19 +21,13 @@
 .arrow{
   margin-right:6px;
   display:inline-block;
-  transition:transform 0.25s ease;
+  transition:transform .25s ease;
 }
 
-.arrow.open{
-  transform:rotate(90deg);
-}
+.arrow.open{ transform:rotate(90deg); }
 
-/* highlight row */
-.row-open{
-  background:#eef4ff;
-}
+.row-open{ background:#eef4ff; }
 
-/* expand animation */
 .expand-row td{
   padding:0;
   border:none;
@@ -46,7 +38,7 @@
   overflow:hidden;
   opacity:0;
   transform:translateY(-5px);
-  transition:all 0.3s ease;
+  transition:all .3s ease;
   background:#f4f6f9;
   padding:0 16px;
 }
@@ -58,14 +50,12 @@
   transform:translateY(0);
 }
 
-/* inline inputs */
 .inline-input{
   width:80px;
   padding:4px;
   margin-left:5px;
 }
 
-/* ===== BADGE STYLES ===== */
 .badge{
   padding:2px 8px;
   border-radius:12px;
@@ -75,22 +65,10 @@
   text-align:center;
 }
 
-.badge-ok{
-  background:#4caf50;
-  color:white;
-}
+.badge-ok{ background:#4caf50; color:#fff; }
+.badge-low{ background:#ff9800; color:#fff; }
+.badge-out{ background:#f44336; color:#fff; }
 
-.badge-low{
-  background:#ff9800;
-  color:white;
-}
-
-.badge-out{
-  background:#f44336;
-  color:white;
-}
-
-/* buttons like badges */
 .btn-badge{
   padding:2px 6px;
   font-size:12px;
@@ -99,14 +77,19 @@
   border-radius:12px;
   cursor:pointer;
   margin-right:4px;
-  color:white;
+  color:#fff;
+}
+
+.btn-badge:disabled{
+  opacity:.55;
+  cursor:not-allowed;
 }
 
 .btn-in{ background:#4caf50; }
 .btn-out{ background:#f44336; }
-.btn-edit{ background:#2196f3; }
+.btn-edit{ background:#f3d921; color:#111; }
+.btn-floor{ background:#2196f3; }
 
-/* inline save button */
 .save-btn{
   margin-left:10px;
   padding:4px 8px;
@@ -114,31 +97,45 @@
   cursor:pointer;
 }
 
-/* DASHBOARD CARDS */
 .dashboard-cards{
-  display:flex;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
   gap:16px;
   margin:16px 0;
 }
 
 .dashboard-cards .card{
-  background:#fff;
-  padding:16px;
+  background: linear-gradient(135deg, #1E3A8A, #0F172A);
+  padding:12px;
   border-radius:12px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1);
-  flex:1;
+  box-shadow:0 2px 6px rgba(0,0,0,.1);
   text-align:center;
 }
 
 .dashboard-cards .card h3{
   margin:0;
-  font-size:24px;
+  font-size:12px;
+  color:#fff;
+  line-height:1.2;
+}
+
+.dashboard-cards .card p{
+  margin:4px 0 0;
+  font-size:12px;
+  color:#fff;
+}
+
+.card-sub{
+  font-size:11px;
+  color:#fff;
+  margin-top:4px;
 }
 
 .filters{
   display:flex;
   gap:10px;
   margin-bottom:12px;
+  flex-wrap:wrap;
 }
 
 .filters select,
@@ -153,9 +150,8 @@
 
 <body>
 <header class="app-header">
-
 <div class="logo-container">
-<img src="{{ url_for('static', filename='images/stockflow logo.png') }}" alt="stockflow Logo" class="logo"/>
+<img src="{{ url_for('static', filename='images/stockflow logo.png') }}" class="logo"/>
 <div class="logo-text">
 <span class="app-subtitle">
 Stockflow <br>Inventiory Dashboard
@@ -164,14 +160,11 @@ Stockflow <br>Inventiory Dashboard
 </div>
 </header>
 
-<!-- =========================
-MAIN MENU
-========================= -->
 <nav class="main-menu">
 <a href="/" class="menu-item active">Inventory Dashboard</a>
 <a href="/reports/sales-dashboard" class="menu-item">Sales Dashboard</a>
+<a href="/floor" class="menu-item">Floor Dashboard</a>
 <a href="/check-stock">Check Stock</a>
-
 
 <div class="menu-item dropdown">
 <span>Add Product <span class="arrow">▾</span></span>
@@ -204,24 +197,18 @@ MAIN MENU
 <span>Tools <span class="arrow">▾</span></span>
 <div class="submenu">
 <a href="/api/vendors/form">Add Vendor</a>
+<a href="/api/sales-people/form">Add Sales Person</a>
 <a href="/price_tags">Price Tags</a>
 <a href="/blue_book">Blue Book</a>
 </div>
 </div>
 </nav>
 
-<!-- =========================
-DASHBOARD STATS
-========================= -->
 <div class="dashboard-cards">
+
 <div class="card">
 <h3 id="cardProducts">0</h3>
 <p>Total Products</p>
-</div>
-
-<div class="card">
-<h3 id="cardUnits">0</h3>
-<p>Total Units</p>
 </div>
 
 <div class="card">
@@ -233,11 +220,32 @@ DASHBOARD STATS
 <h3 id="cardOut">0</h3>
 <p>Out of Stock</p>
 </div>
+
+<div class="card">
+<h3 id="cardCLOT">0</h3>
+<p>CLOT</p>
+<div class="card-sub" id="cardCLOTCost">$0.00</div>
 </div>
 
-<!-- =========================
-FILTERS
-========================= -->
+<div class="card">
+<h3 id="cardALOT">0</h3>
+<p>ALOT</p>
+<div class="card-sub" id="cardALOTCost">$0.00</div>
+</div>
+
+<div class="card">
+<h3 id="cardBLOT">0</h3>
+<p>BLOT</p>
+<div class="card-sub" id="cardBLOTCost">$0.00</div>
+</div>
+
+<div class="card">
+<h3 id="cardCost">$0.00</h3>
+<p>Total Inventory Cost</p>
+</div>
+
+</div>
+
 <div class="filters">
 <select id="warehouseFilter">
 <option value="">All Warehouses</option>
@@ -279,251 +287,176 @@ FILTERS
 <tbody id="inventory-body"></tbody>
 </table>
 
-<!-- =========================
-EDIT PRODUCT MODAL
-========================= -->
-<div id="editModal" class="modal" style="display:none;">
-  <div class="edit-card">
-    <span class="close" id="closeEditModalBtn">✕</span>
-    <h2>✏️ Edit Product</h2>
-    <form id="editProductForm" class="edit-form-grid">
-      <input type="hidden" id="editProductId">
-      <label>SKU</label><input type="text" id="editSku">
-      <label>Item</label><input type="text" id="editItem">
-      <label>Vendor</label><input type="text" id="editVendor">
-      <label>Color</label><input type="text" id="editColor">
-      <label>Warehouse</label><input type="text" id="editWhs">
-      <label>Lot Type</label><input type="text" id="editLotType">
-      <label>Cost</label><input type="number" step="0.01" id="editCost">
-      <label>Freight (%)</label><input type="number" step="0.01" id="editFreight">
-      <label>Description</label><input type="text" id="editDescription">
-      <button type="submit">💾 Save Changes</button>
-    </form>
-    <p id="editMessage"></p>
-  </div>
-</div>
-
 <script>
-const userRole="manager";
-let openRowId = null;
-
-async function loadDashboard() {
+async function loadDashboard(){
   const res = await fetch("/api/dashboard");
-  let products = await res.json();
+  const products = await res.json();
 
-  // ===== DYNAMIC VENDOR POPULATION =====
+  if(!Array.isArray(products)){
+    console.error(products);
+    return;
+  }
+
   const vendorFilter = document.getElementById("vendorFilter");
-  const vendors = [...new Set(products.map(p => (p.vendor||"").trim()))].sort();
-  const currentVal = vendorFilter.value; // preserve selected
+  const vendors = [...new Set(products.map(p => (p.vendor || "").trim()))].sort();
+  const currentVal = vendorFilter.value;
+
   vendorFilter.innerHTML = '<option value="">All Vendors</option>';
-  vendors.forEach(v => {
+
+  vendors.forEach(v=>{
     const opt = document.createElement("option");
     opt.value = v;
     opt.textContent = v;
     vendorFilter.appendChild(opt);
   });
-  if (currentVal) vendorFilter.value = currentVal;
 
-  // ===== APPLY FILTERS =====
+  vendorFilter.value = currentVal;
+
   const warehouseVal = document.getElementById("warehouseFilter").value;
   const vendorVal = document.getElementById("vendorFilter").value.trim();
   const statusVal = document.getElementById("statusFilter").value;
   const searchVal = document.getElementById("searchInput").value.toLowerCase();
 
-  products = products.filter(p => {
-    if (warehouseVal && p.whs_location !== warehouseVal) return false;
-    if (vendorVal && (p.vendor||"").trim() !== vendorVal) return false;
-    if (statusVal && p.status !== statusVal) return false;
-    if (searchVal && !(`${p.sku} ${p.item}`.toLowerCase().includes(searchVal))) return false;
+  const filtered = products.filter(p=>{
+    if(warehouseVal && p.whs_location !== warehouseVal) return false;
+    if(vendorVal && (p.vendor || "").trim() !== vendorVal) return false;
+    if(statusVal && p.status !== statusVal) return false;
+    if(searchVal && !(`${p.sku} ${p.item}`.toLowerCase().includes(searchVal))) return false;
     return true;
   });
 
   const tbody = document.getElementById("inventory-body");
   tbody.innerHTML = "";
 
-  products.forEach(p => {
+  filtered.forEach(p=>{
+    const floorDisabled = p.is_on_floor ? "disabled" : "";
+    const floorText = p.is_on_floor ? "ON FLOOR" : "FLOOR";
+
     const tr = document.createElement("tr");
+
     tr.innerHTML = `
       <td>${p.sku}</td>
-      <td class="expand-cell"><span class="arrow">▶</span>${p.item}</td>
+      <td>${p.item}</td>
       <td>${p.description || ""}</td>
       <td>${p.vendor}</td>
-      <td>${p.color}</td>
-      <td>${p.whs_location}</td>
-      <td>${p.lot_type}</td>
+      <td>${p.color || ""}</td>
+      <td>${p.whs_location || ""}</td>
+      <td>${p.lot_type || ""}</td>
       <td>${p.stock}</td>
       <td><span class="badge ${p.status_class}">${p.status}</span></td>
       <td>
-        <button class="btn-badge btn-in" onclick="event.stopPropagation(); move(${p.id},'IN')">IN</button>
-        <button class="btn-badge btn-out" onclick="event.stopPropagation(); move(${p.id},'OUT')">OUT</button>
-        <button class="btn-badge btn-edit" onclick="event.stopPropagation(); openEditModal(${p.id})">REVIEW/EDIT</button>
-      </td>
-    `;
-
-    const detailRow = document.createElement("tr");
-    detailRow.innerHTML = `
-      <td colspan="10">
-        <div class="expand-box">
-          <b>Description:</b> ${p.description || "N/A"}<br><br>
-          <b>Cost:</b> $<input class="inline-input" id="cost-${p.id}" value="${p.cost || 0}">
-          <b>Freight:</b> <input class="inline-input" id="freight-${p.id}" value="${p.freight || 0}"> %
-          <button class="save-btn" onclick="event.stopPropagation(); saveInline(${p.id})">Save</button>
-        </div>
+        <button class="btn-badge btn-in" onclick="move(${p.id},'IN')">IN</button>
+        <button class="btn-badge btn-out" onclick="move(${p.id},'OUT')">OUT</button>
+        <button class="btn-badge btn-floor" ${floorDisabled}
+          onclick="moveToFloor(${p.id})">${floorText}</button>
       </td>
     `;
 
     tbody.appendChild(tr);
-    tbody.appendChild(detailRow);
+  });
 
-    const expandCell = tr.querySelector(".expand-cell");
-    const arrow = tr.querySelector(".arrow");
-    const box = detailRow.querySelector(".expand-box");
+  document.getElementById("cardProducts").textContent = filtered.length;
 
-    expandCell.addEventListener("click", () => {
-      const isOpen = box.classList.contains("open");
-      document.querySelectorAll(".expand-box").forEach(b => b.classList.remove("open"));
-      document.querySelectorAll(".arrow").forEach(a => a.classList.remove("open"));
-      document.querySelectorAll("tr").forEach(r => r.classList.remove("row-open"));
+  document.getElementById("cardLow").textContent =
+    filtered.filter(p => p.status === "LOW").length;
 
-      if (!isOpen) {
-        box.classList.add("open");
-        arrow.classList.add("open");
-        tr.classList.add("row-open");
-        openRowId = p.id;
-      } else openRowId = null;
-      localStorage.setItem("openRowId", openRowId);
+  document.getElementById("cardOut").textContent =
+    filtered.filter(p => p.status === "OUT").length;
+
+  function lotMetrics(lot){
+    const rows = filtered.filter(
+      p => (p.lot_type || "").toUpperCase() === lot
+    );
+
+    const count = rows.length;
+
+    const cost = rows.reduce((sum,p)=>{
+      const stock = Number(p.stock) || 0;
+      const unitCost = Number(p.cost) || 0;
+      return sum + (stock * unitCost);
+    },0);
+
+    return { count, cost };
+  }
+
+  const clot = lotMetrics("CLOT");
+  const alot = lotMetrics("ALOT");
+  const blot = lotMetrics("BLOT");
+
+  document.getElementById("cardCLOT").textContent = clot.count;
+  document.getElementById("cardALOT").textContent = alot.count;
+  document.getElementById("cardBLOT").textContent = blot.count;
+
+  document.getElementById("cardCLOTCost").textContent =
+    "$" + clot.cost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  document.getElementById("cardALOTCost").textContent =
+    "$" + alot.cost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  document.getElementById("cardBLOTCost").textContent =
+    "$" + blot.cost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  const totalCost = filtered.reduce((sum,p)=>{
+    const stock = Number(p.stock) || 0;
+    const cost = Number(p.cost) || 0;
+    return sum + (stock * cost);
+  },0);
+
+  document.getElementById("cardCost").textContent =
+    "$" + totalCost.toLocaleString(undefined,{
+      minimumFractionDigits:2,
+      maximumFractionDigits:2
     });
-
-    const saved = localStorage.getItem("openRowId");
-    if (saved && Number(saved) === p.id) {
-      setTimeout(() => {
-        box.classList.add("open");
-        arrow.classList.add("open");
-        tr.classList.add("row-open");
-      }, 100);
-    }
-  });
-
-  // UPDATE METRIC CARDS
-  document.getElementById("cardProducts").textContent = products.length;
-  document.getElementById("cardUnits").textContent = products.reduce((sum,p)=>sum+(p.stock||0),0);
-  document.getElementById("cardLow").textContent = products.filter(p=>p.status_class==='badge-low').length;
-  document.getElementById("cardOut").textContent = products.filter(p=>p.status_class==='badge-out').length;
 }
 
-// ================= INLINE SAVE =================
-async function saveInline(id){
-  const cost = parseFloat(document.getElementById(`cost-${id}`).value)||0;
-  const freight = parseFloat(document.getElementById(`freight-${id}`).value)||0;
-
-  await fetch(`/api/products/${id}`,{
-    method:"PATCH",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ cost, freight })
-  });
-
-  loadDashboard();
-}
-
-// ================= MOVE IN/OUT =================
 async function move(id,type){
-  const qty=Number(prompt("Enter quantity:"));
+  const qty = Number(prompt("Enter quantity:"));
   if(!qty) return;
 
   await fetch("/api/movements",{
     method:"POST",
-    headers:{ "Content-Type":"application/json"},
-    body:JSON.stringify({product_id:id,movement_type:type,quantity:qty})
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      product_id:id,
+      movement_type:type,
+      quantity:qty
+    })
   });
 
   loadDashboard();
 }
 
-// ================= EDIT MODAL =================
-document.addEventListener("DOMContentLoaded",()=>{
+async function moveToFloor(id){
+  try{
+    const res = await fetch("/api/stock/move-to-floor",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        product_id:id,
+        qty:1
+      })
+    });
 
-  window.openEditModal=async(productId)=>{
-    try{
-      const res=await fetch(`/api/products/${productId}`);
-      if(!res.ok) throw new Error("Product not found");
-      const p=await res.json();
+    const data = await res.json();
 
-      document.getElementById("editProductId").value=p.id??"";
-      document.getElementById("editSku").value=p.sku??"";
-      document.getElementById("editItem").value=p.item??"";
-      document.getElementById("editVendor").value=p.vendor??"";
-      document.getElementById("editColor").value=p.color??"";
-      document.getElementById("editWhs").value=p.whs_location??"";
-      document.getElementById("editLotType").value=p.lot_type??"";
-      document.getElementById("editCost").value=p.cost??"";
-      document.getElementById("editFreight").value=p.freight??"";
-      document.getElementById("editDescription").value=p.description??"";
-
-      document.getElementById("editModal").style.display="flex";
-
-    }catch(err){
-      console.error(err);
-      alert("Error loading product data.");
+    if(!res.ok){
+      throw new Error(data.error || "Move failed");
     }
-  };
 
-  const closeBtn=document.getElementById("closeEditModalBtn");
-  closeBtn.addEventListener("click",()=>{
-    document.getElementById("editModal").style.display="none";
-  });
+    alert("✅ Moved to floor successfully");
+    loadDashboard();
 
-  const editForm=document.getElementById("editProductForm");
-  editForm.addEventListener("submit",async(e)=>{
-    e.preventDefault();
+  }catch(err){
+    alert("❌ " + err.message);
+  }
+}
 
-    const productId=document.getElementById("editProductId").value;
-    const payload={
-      sku: document.getElementById("editSku").value,
-      item: document.getElementById("editItem").value,
-      vendor: document.getElementById("editVendor").value,
-      color: document.getElementById("editColor").value,
-      whs_location: document.getElementById("editWhs").value,
-      lot_type: document.getElementById("editLotType").value,
-      cost: parseFloat(document.getElementById("editCost").value)||0,
-      freight: parseFloat(document.getElementById("editFreight").value)||0,
-      description: document.getElementById("editDescription").value
-    };
+document.getElementById("warehouseFilter").addEventListener("change",loadDashboard);
+document.getElementById("vendorFilter").addEventListener("change",loadDashboard);
+document.getElementById("statusFilter").addEventListener("change",loadDashboard);
+document.getElementById("searchInput").addEventListener("input",loadDashboard);
 
-    try{
-      const res=await fetch(`/api/products/${productId}`,{
-        method:"PATCH",
-        headers:{ "Content-Type":"application/json"},
-        body:JSON.stringify(payload)
-      });
-
-      const msg=document.getElementById("editMessage");
-      if(!res.ok) throw new Error("Failed to save changes");
-
-      msg.textContent="✅ Saved!";
-      msg.style.color="green";
-
-      setTimeout(()=>{
-        document.getElementById("editModal").style.display="none";
-        msg.textContent="";
-        loadDashboard();
-      },500);
-
-    }catch(err){
-      console.error(err);
-      const msg=document.getElementById("editMessage");
-      msg.textContent="❌ Error saving changes!";
-      msg.style.color="red";
-    }
-  });
-
-  // ===== FILTER EVENT LISTENERS =====
-  document.getElementById("warehouseFilter").addEventListener("change", loadDashboard);
-  document.getElementById("vendorFilter").addEventListener("change", loadDashboard);
-  document.getElementById("statusFilter").addEventListener("change", loadDashboard);
-  document.getElementById("searchInput").addEventListener("input", loadDashboard);
-
-  loadDashboard();
-});
+loadDashboard();
 </script>
 
 </body>

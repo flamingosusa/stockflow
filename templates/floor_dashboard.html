@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Floor Dashboard</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+<style>
+.dashboard-table td,
+.dashboard-table th{
+  padding:6px 10px;
+  font-size:13px;
+}
+
+.badge{
+  padding:2px 8px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:bold;
+  display:inline-block;
+}
+
+.badge-ok{ background:#4caf50; color:white; }
+.badge-out{ background:#f44336; color:white; }
+
+.btn-badge{
+  padding:2px 6px;
+  font-size:12px;
+  font-weight:bold;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  margin-right:4px;
+  color:white;
+}
+
+.btn-badge:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
+.btn-out{ background:#f44336; }
+.btn-return{ background:#90ac12d6; }
+
+.dashboard-cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:14px;
+  margin:16px 0;
+}
+
+.card{
+  background:#fff;
+  border-radius:12px;
+  padding:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,.1);
+  text-align:center;
+}
+
+.card h3{
+  margin:0;
+  font-size:18px;
+}
+
+.card p{
+  margin:4px 0 0;
+  font-size:12px;
+  color:#666;
+}
+
+.lot-cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:14px;
+  margin:0 0 16px 0;
+}
+
+.lot-card{
+  background:linear-gradient(135deg,#1E3A8A,#0F172A);
+  color:#fff;
+  border-radius:12px;
+  padding:12px;
+  text-align:center;
+}
+
+.lot-card h4{
+  margin:0;
+  font-size:18px;
+}
+
+.lot-card p{
+  margin:4px 0 0;
+  font-size:12px;
+}
+
+.card-sub{
+  font-size:11px;
+  opacity:.9;
+  margin-top:4px;
+}
+</style>
+</head>
+
+<body>
+
+<header class="app-header">
+<div class="logo-container">
+<img src="{{ url_for('static', filename='images/stockflow logo.png') }}" class="logo"/>
+<div class="logo-text">
+<span class="app-subtitle">
+Stockflow <br>Floor Dashboard
+</span>
+</div>
+</div>
+</header>
+
+<nav class="main-menu">
+<a href="/" class="menu-item">Inventory Dashboard</a>
+<a href="/floor" class="menu-item active">Floor Dashboard</a>
+<a href="/reports/sales-dashboard" class="menu-item">Sales Dashboard</a>
+</nav>
+
+<div class="dashboard-cards">
+  <div class="card">
+    <h3 id="cardCost">$0.00</h3>
+    <p>Total Floor Cost</p>
+  </div>
+
+  <div class="card">
+    <h3 id="cardSales">$0.00</h3>
+    <p>Sales</p>
+  </div>
+
+  <div class="card">
+    <h3 id="cardProfit">$0.00</h3>
+    <p>Profit</p>
+  </div>
+</div>
+
+<div class="lot-cards">
+  <div class="lot-card">
+    <h4 id="cardALOT">$0</h4>
+    <p>ALOT</p>
+  </div>
+
+  <div class="lot-card">
+    <h4 id="cardBLOT">$0</h4>
+    <p>BLOT</p>
+  </div>
+
+  <div class="lot-card">
+    <h4 id="cardCLOT">$0</h4>
+    <p>CLOT</p>
+  </div>
+</div>
+
+<table class="dashboard-table">
+<thead>
+<tr>
+<th>SKU</th>
+<th>Item</th>
+<th>Vendor</th>
+<th>Color</th>
+<th>Description</th>
+<th>Lot Type</th>
+<th>Status</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="floor-body"></tbody>
+</table>
+
+<script>
+async function loadFloor(){
+  try{
+    const [floorRes, salesRes] = await Promise.all([
+      fetch("/api/stock/floor"),
+      fetch("/reports/sales/list")
+    ]);
+
+    const data = await floorRes.json();
+    const sales = await salesRes.json();
+
+    if(!Array.isArray(data)){
+      console.error("Floor API error:", data);
+      return;
+    }
+
+    const tbody = document.getElementById("floor-body");
+    tbody.innerHTML = "";
+
+    let totalFloorCost = 0;
+    const lotTotals = { ALOT:0, BLOT:0, CLOT:0 };
+
+    data.forEach(p => {
+
+      const isOnFloor = !!p.on_floor;
+      const status = isOnFloor ? "AVAILABLE" : "SOLD";
+      const badge = isOnFloor ? "badge-ok" : "badge-out";
+
+      const sellDisabled = isOnFloor ? "" : "disabled";
+      const revertDisabled = isOnFloor ? "disabled" : "";
+
+      const cost = Number(p.cost || 0);
+      const lot = (p.lot_type || "").toUpperCase();
+
+      if(isOnFloor){
+        totalFloorCost += cost;
+      }
+
+      if(lotTotals[lot] !== undefined){
+        lotTotals[lot] += cost;
+      }
+
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${p.sku}</td>
+        <td>${p.item}</td>
+        <td>${p.vendor}</td>
+        <td>${p.color || ""}</td>
+        <td>${p.description || ""}</td>
+        <td>${p.lot_type || ""}</td>
+        <td><span class="badge ${badge}">${status}</span></td>
+        <td>
+          <button class="btn-badge btn-out"
+            ${sellDisabled}
+            onclick="sellFromFloor(${p.id})">Sell off Floor</button>
+
+          <button class="btn-badge btn-return"
+            ${revertDisabled}
+            onclick="revertFloorSale(${p.id})">Revert</button>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    const validSales = Array.isArray(sales) ? sales.filter(
+      s => (s.status || "").toUpperCase() !== "CANCELLED"
+    ) : [];
+
+    const totalSales = validSales.reduce(
+      (sum,s)=>sum + Number(s.total_amount || 0),0
+    );
+
+    const profit = totalSales - totalFloorCost;
+
+    document.getElementById("cardCost").textContent =
+      "$" + totalFloorCost.toFixed(2);
+
+    document.getElementById("cardSales").textContent =
+      "$" + totalSales.toFixed(2);
+
+    document.getElementById("cardProfit").textContent =
+      "$" + profit.toFixed(2);
+
+    document.getElementById("cardALOT").textContent =
+      "$" + lotTotals.ALOT.toFixed(2);
+
+    document.getElementById("cardBLOT").textContent =
+      "$" + lotTotals.BLOT.toFixed(2);
+
+    document.getElementById("cardCLOT").textContent =
+      "$" + lotTotals.CLOT.toFixed(2);
+
+  }catch(err){
+    console.error("Floor load failed:", err);
+  }
+}
+// ================= REVERT =================
+async function revertFloorSale(id){
+  try{
+    const res = await fetch("/api/stock/revert-floor-sale", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ product_id:id })
+    });
+
+    const data = await res.json();
+
+    if(!res.ok){
+      throw new Error(data.error || "Revert failed");
+    }
+
+    alert("✅ Item available on floor again");
+    loadFloor();
+
+  }catch(err){
+    alert("❌ " + err.message);
+  }
+}
+
+// ================= SELL =================
+async function sellFromFloor(id){
+  try{
+    const res = await fetch("/api/stock/sell-from-floor", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        product_id:id,
+        qty:1
+      })
+    });
+
+    const data = await res.json();
+
+    if(!res.ok){
+      throw new Error(data.error || "Sale failed");
+    }
+
+    alert("✅ Item sold from floor");
+    loadFloor();
+
+  }catch(err){
+    alert("❌ " + err.message);
+  }
+}
+
+loadFloor();
+</script>
+
+</body>
+</html>

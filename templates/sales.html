@@ -2,119 +2,151 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>New Sale</title>
 
 <style>
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(to bottom, #1E3A8A, #CBD5E1);
-    min-height: 100vh;
-    padding: 40px 20px;
+*{
+    box-sizing:border-box;
 }
 
-.sale-card {
-    max-width: 1200px;
-    margin: auto;
-    padding: 30px 40px;
-    background: linear-gradient(to bottom, #4a90e2, #357ABD);
-    color: #fff;
-    border-radius: 14px;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.35);
+body{
+    margin:0;
+    font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+    background:linear-gradient(to bottom,#1E3A8A,#CBD5E1);
+    min-height:100vh;
+    padding:40px 20px;
 }
 
-h2 { text-align: center; margin-bottom: 25px; }
-
-label { font-weight: 600; display: block; margin-bottom: 5px; }
-
-input, textarea, select {
-    width: 80%;
-    padding: 10px;
-    border-radius: 6px;
-    border: none;
-    font-size: 14px;
+.sale-card{
+    max-width:1200px;
+    margin:auto;
+    padding:30px 40px;
+    background:linear-gradient(to bottom,#4a90e2,#357ABD);
+    color:#fff;
+    border-radius:14px;
+    box-shadow:0 15px 40px rgba(0,0,0,.35);
 }
 
-textarea { resize: vertical; }
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+h2{
+    text-align:center;
+    margin:15px 0 25px;
 }
 
-.toggle-group { display: flex; gap: 10px; }
+label{
+    font-weight:600;
+    display:block;
+    margin-bottom:6px;
+}
 
-.toggle-btn {
+input,textarea,select{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:6px;
+    font-size:14px;
+}
+
+textarea{
+    resize:vertical;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:20px;
+}
+
+.toggle-group{
+    display:flex;
+    gap:10px;
+}
+
+.toggle-btn{
     flex:1;
     padding:10px;
-    border-radius:6px;
     border:none;
+    border-radius:6px;
     font-weight:bold;
     cursor:pointer;
     background:#fff;
     color:#357ABD;
 }
 
-.toggle-btn.active {
-    background:#357ABD;
+.toggle-btn.active{
+    background:#1d4ed8;
     color:#fff;
 }
 
-table {
+table{
     width:100%;
     border-collapse:collapse;
     margin-top:25px;
-    background: rgba(255,255,255,0.15);
+    background:rgba(255,255,255,.12);
+    overflow:hidden;
     border-radius:10px;
 }
 
-th, td { padding:12px; }
+th,td{
+    padding:10px;
+    text-align:left;
+    vertical-align:middle;
+}
 
-th { background: rgba(0,0,0,0.2); }
+th{
+    background:rgba(0,0,0,.2);
+    font-size:13px;
+}
 
-.btn {
-    padding: 8px 14px;
-    border-radius:6px;
+td input, td select{
+    min-width:100px;
+}
+
+.btn{
+    padding:8px 14px;
     border:none;
+    border-radius:6px;
     cursor:pointer;
     font-weight:bold;
 }
 
-.btn-add {
+.btn-add{
+    margin-top:15px;
     background:#fff;
     color:#357ABD;
-    margin-top:15px;
 }
 
-.btn-remove {
+.btn-remove{
     background:#ef4444;
     color:#fff;
 }
 
-.total-box {
+.total-box{
     text-align:right;
     margin-top:20px;
-    font-size:20px;
+    font-size:22px;
     font-weight:bold;
 }
 
-.actions {
+.actions{
     text-align:center;
     margin-top:30px;
 }
 
-.submit {
+.submit{
     width:50%;
+    max-width:320px;
     padding:14px;
+    border:none;
+    border-radius:8px;
     background:#fff;
     color:#357ABD;
     font-weight:bold;
-    border-radius:8px;
     cursor:pointer;
 }
 
-.back-btn {
-    background: rgba(255,255,255,0.9);
+.back-btn{
+    background:rgba(255,255,255,.95);
     color:#357ABD;
     border:none;
     padding:8px 14px;
@@ -123,9 +155,40 @@ th { background: rgba(0,0,0,0.2); }
     cursor:pointer;
 }
 
-.back-btn:hover {
-    background:#357ABD;
-    color:#fff;
+.back-btn:hover,
+.submit:hover,
+.btn-add:hover{
+    opacity:.92;
+}
+
+.line-total{
+    font-weight:bold;
+}
+
+@media(max-width:1100px){
+    .grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .sale-card{
+        padding:25px;
+    }
+
+    table{
+        display:block;
+        overflow-x:auto;
+        white-space:nowrap;
+    }
+}
+
+@media(max-width:700px){
+    .grid{
+        grid-template-columns:1fr;
+    }
+
+    .submit{
+        width:100%;
+    }
 }
 </style>
 </head>
@@ -143,79 +206,78 @@ th { background: rgba(0,0,0,0.2); }
 <div class="grid">
 
 <div>
-<label>Invoice #</label>
-<input type="text" required>
+<label for="invoiceNumber">Invoice #</label>
+<input type="text" id="invoiceNumber" required>
 </div>
 
 <div>
-<label>Sale Date</label>
-<input type="date" required>
+<label for="saleDate">Sale Date</label>
+<input type="date" id="saleDate" required>
 </div>
 
 <div>
-<label>Delivery / Pickup Date</label>
-<input type="date">
+<label for="deliveryDate">Delivery / Pickup Date</label>
+<input type="date" id="deliveryDate">
 </div>
 
 <div>
-<label>Customer Name</label>
-<input type="text" required>
+<label for="customerName">Customer Name</label>
+<input type="text" id="customerName" required>
 </div>
 
 <div>
-<label>Email</label>
-<input type="email">
+<label for="email">Email</label>
+<input type="email" id="email">
 </div>
 
 <div>
-<label>Address</label>
-<input type="text">
+<label for="address">Address</label>
+<input type="text" id="address">
 </div>
 
 <div>
-<label>Phone #1</label>
-<input type="text">
+<label for="phone1">Phone #1</label>
+<input type="text" id="phone1">
 </div>
 
 <div>
-<label>Phone #2</label>
-<input type="text">
+<label for="phone2">Phone #2</label>
+<input type="text" id="phone2">
 </div>
 
 <div>
 <label>Sale Type</label>
-
 <div class="toggle-group">
 <button type="button" class="toggle-btn active" data-value="Delivery">Delivery</button>
 <button type="button" class="toggle-btn" data-value="Pickup">Pickup</button>
 </div>
-
 <input type="hidden" id="saleType" value="Delivery">
 </div>
 
 <div>
-<label>Salesperson</label>
-<input type="text">
-</div>
-
-<div>
-<label>Status</label>
-<select>
-<option>Pending</option>
-<option>Completed</option>
-<option>Cancelled</option>
+<label for="salespersonSelect">Salesperson</label>
+<select id="salespersonSelect">
+<option value="">Loading...</option>
 </select>
 </div>
 
-<div style="grid-column: span 1;">
-<label>Notes</label>
-<textarea rows="1"></textarea>
+<div>
+<label for="status">Status</label>
+<select id="status">
+<option value="Pending">Pending</option>
+<option value="Completed">Completed</option>
+<option value="Cancelled">Cancelled</option>
+</select>
+</div>
+
+<div>
+<label for="notes">Notes</label>
+<textarea id="notes" rows="1"></textarea>
 </div>
 
 </div>
 
 <table id="productsTable">
-
 <thead>
 <tr>
 <th>Item</th>
@@ -230,23 +292,23 @@ th { background: rgba(0,0,0,0.2); }
 <th>Actions</th>
 </tr>
 </thead>
-
 <tbody></tbody>
-
 </table>
 
 <button type="button" class="btn btn-add" onclick="addRow()">+ Add Product</button>
 
 <div class="grid" style="margin-top:20px;">
+
 <div>
-<label>Tax %</label>
+<label for="taxPercent">Tax %</label>
 <input type="number" id="taxPercent" value="0" step="0.01" min="0">
 </div>
 
 <div>
-<label>Delivery Fee</label>
+<label for="deliveryFee">Delivery Fee</label>
 <input type="number" id="deliveryFee" value="0" step="0.01" min="0">
 </div>
+
 </div>
 
 <div class="total-box">
@@ -261,177 +323,297 @@ Invoice Total: $<span id="invoiceTotal">0.00</span>
 </div>
 
 <script>
+let products = [];
 
-let products = []
-
+// -------------------------
+// Load products
+// -------------------------
 async function loadProducts(){
-    const res = await fetch("/api/products")
-    products = await res.json()
+    try{
+        const res = await fetch("/api/products");
+        products = await res.json();
+
+        if(!Array.isArray(products)){
+            products = [];
+        }
+    }catch(err){
+        console.error("Products load error:", err);
+        products = [];
+    }
 }
 
+// -------------------------
+// Add row
+// -------------------------
 function addRow(){
-    const row = document.createElement("tr")
-    const options = products.map(p =>
-        `<option value="${p.id}"
-        data-vendor="${p.vendor || ''}"
-        data-sku="${p.sku}"
-        data-description="${p.description || ''}"
-        data-color="${p.color || ''}"
-        data-price="${p.sale_price || 0}"
-        data-lot="${p.lot_type || ''}">
-        ${p.item} | ${p.color || 'N/A'} | ${p.description || 'No desc'}
-        </option>`
-    ).join("")
+    const tbody = document.querySelector("#productsTable tbody");
+
+    const options = products.map(p => `
+        <option value="${p.id}"
+            data-item="${p.item || ''}"
+            data-vendor="${p.vendor || ''}"
+            data-description="${p.description || ''}"
+            data-sku="${p.sku || ''}"
+            data-color="${p.color || ''}"
+            data-price="${p.sale_price || 0}"
+            data-lot="${p.lot_type || ''}">
+            ${p.item || ''} | ${p.color || 'N/A'} | ${p.description || 'NO DESC'}
+        </option>
+    `).join("");
+
+    const row = document.createElement("tr");
 
     row.innerHTML = `
-    <td>
-        <select onchange="fillProduct(this)">
-            <option value="">Select product</option>
-            ${options}
-        </select>
-    </td>
-    <td><input readonly></td>
-    <td><input readonly></td>
-    <td><input readonly></td>
-    <td><input readonly></td>
-    <td><input readonly></td>
-    <td><input type="number" min="1" value="1" oninput="calc()"></td>
-    <td><input type="number" step="0.01" value="0" oninput="calc()"></td>
-    <td class="line-total">0.00</td>
-    <td>
-        <button type="button" class="btn btn-remove" onclick="this.closest('tr').remove(); calc()">X</button>
-    </td>
-    `
-    document.querySelector("#productsTable tbody").appendChild(row)
+        <td>
+            <select class="product-select" onchange="fillProduct(this)">
+                <option value="">Select product</option>
+                ${options}
+            </select>
+        </td>
+        <td><input class="vendor" readonly></td>
+        <td><input class="description" readonly></td>
+        <td><input class="sku" readonly></td>
+        <td><input class="color" readonly></td>
+        <td><input class="lot" readonly></td>
+        <td><input class="qty" type="number" min="1" value="1" oninput="calc()"></td>
+        <td><input class="price" type="number" step="0.01" min="0" value="0" oninput="calc()"></td>
+        <td class="line-total">0.00</td>
+        <td>
+            <button type="button" class="btn btn-remove" onclick="removeRow(this)">X</button>
+        </td>
+    `;
+
+    tbody.appendChild(row);
 }
 
+// -------------------------
+// Remove row
+// -------------------------
+function removeRow(btn){
+    btn.closest("tr").remove();
+    calc();
+}
+
+// -------------------------
+// Fill row product data
+// -------------------------
 function fillProduct(select){
-    const opt = select.selectedOptions[0]
-    const row = select.closest("tr")
-    row.children[1].children[0].value = opt.dataset.vendor || ""
-    row.children[2].children[0].value = opt.dataset.description || ""
-    row.children[3].children[0].value = opt.dataset.sku || ""
-    row.children[4].children[0].value = opt.dataset.color || ""
-    row.children[5].children[0].value = opt.dataset.lot || ""
-    row.children[7].children[0].value = opt.dataset.price || 0
-    calc()
+    const row = select.closest("tr");
+    const opt = select.selectedOptions[0];
+
+    row.querySelector(".vendor").value = opt.dataset.vendor || "";
+    row.querySelector(".description").value = opt.dataset.description || "";
+    row.querySelector(".sku").value = opt.dataset.sku || "";
+    row.querySelector(".color").value = opt.dataset.color || "";
+    row.querySelector(".lot").value = opt.dataset.lot || "";
+    row.querySelector(".price").value = opt.dataset.price || 0;
+
+    calc();
 }
 
+// -------------------------
+// Calculate totals
+// -------------------------
 function calc(){
-    let subtotal = 0
+    let subtotal = 0;
+
     document.querySelectorAll("#productsTable tbody tr").forEach(row => {
-        const qty = Number(row.children[6].children[0].value || 0)
-        const price = Number(row.children[7].children[0].value || 0)
-        const line = qty * price
-        row.children[8].textContent = line.toFixed(2)
-        subtotal += line
-    })
+        const qty = Number(row.querySelector(".qty").value || 0);
+        const price = Number(row.querySelector(".price").value || 0);
+        const line = qty * price;
 
-    const taxPercent = Number(document.getElementById("taxPercent").value || 0)
-    const deliveryFee = Number(document.getElementById("deliveryFee").value || 0)
-    const taxAmount = subtotal * taxPercent / 100
-    const total = subtotal + taxAmount + deliveryFee
-    document.getElementById("invoiceTotal").textContent = total.toFixed(2)
+        row.querySelector(".line-total").textContent = line.toFixed(2);
+        subtotal += line;
+    });
+
+    const taxPercent = Number(document.getElementById("taxPercent").value || 0);
+    const deliveryFee = Number(document.getElementById("deliveryFee").value || 0);
+
+    const taxAmount = subtotal * taxPercent / 100;
+    const total = subtotal + taxAmount + deliveryFee;
+
+    document.getElementById("invoiceTotal").textContent = total.toFixed(2);
 }
 
-document.getElementById("taxPercent").oninput = calc
-document.getElementById("deliveryFee").oninput = calc
+document.getElementById("taxPercent").addEventListener("input", calc);
+document.getElementById("deliveryFee").addEventListener("input", calc);
 
+// -------------------------
+// Toggle sale type
+// -------------------------
 document.querySelectorAll(".toggle-btn").forEach(btn => {
-    btn.onclick = () => {
-        document.querySelectorAll(".toggle-btn").forEach(b => b.classList.remove("active"))
-        btn.classList.add("active")
-        document.getElementById("saleType").value = btn.dataset.value
-    }
-})
-
-loadProducts()
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".toggle-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("saleType").value = btn.dataset.value;
+    });
+});
 
 // -------------------------
-// Check stock before submitting sale
+// Load salespeople
 // -------------------------
-async function checkStock(productId, requestedQty) {
-    try {
-        const res = await fetch(`/api/stock/item?q=${productId}`)
-        if (!res.ok) throw new Error("Failed to fetch stock")
-        const data = await res.json()
-        const availableQty = data.total || 0
-        if (requestedQty > availableQty) {
-            alert(`⚠ Item number ${productId} is out of stock or does not have enough quantity.\nAvailable stock: ${availableQty}\nPlease check inventory levels.`)
-            return false
+async function loadSalesPeople(){
+    const select = document.getElementById("salespersonSelect");
+
+    try{
+        const res = await fetch("/api/sales-people");
+        const people = await res.json();
+
+        if(!Array.isArray(people)){
+            select.innerHTML = `<option value="">No data</option>`;
+            return;
         }
-        return true
-    } catch(err) {
-        console.error("Stock check error:", err)
-        alert("Item stock unavailable. Please try again.")
-        return false
+
+        select.innerHTML = `<option value="">Select salesperson</option>`;
+
+        people.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.name || "";
+            opt.textContent = `${p.sales_person_id || ''} - ${p.name || ''}`;
+            select.appendChild(opt);
+        });
+
+    }catch(err){
+        console.error("Sales people load error:", err);
+        select.innerHTML = `<option value="">Load failed</option>`;
     }
 }
 
-document.getElementById("saleForm").addEventListener("submit", async e => {
-    e.preventDefault()
+// -------------------------
+// Check stock
+// -------------------------
+async function checkStock(productId, requestedQty){
+    try{
+        const res = await fetch(`/api/stock/item?q=${productId}`);
+        if(!res.ok) throw new Error("Failed stock request");
+
+        const data = await res.json();
+        const availableQty = Number(data.total || 0);
+
+        if(requestedQty > availableQty){
+            alert(`⚠ Not enough stock.\nAvailable: ${availableQty}`);
+            return false;
+        }
+
+        return true;
+
+    }catch(err){
+        console.error("Stock check error:", err);
+        alert("Unable to verify stock.");
+        return false;
+    }
+}
+
+// -------------------------
+// Submit sale
+// -------------------------
+document.getElementById("saleForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+
+    const rows = document.querySelectorAll("#productsTable tbody tr");
+
+    if(rows.length === 0){
+        alert("Add at least one product.");
+        return;
+    }
 
     const sale = {
-        invoice_number: document.querySelector("input[type='text']").value,
-        sale_date: document.querySelector("input[type='date']").value,
-        delivery_date: document.querySelectorAll("input[type='date']")[1].value,
-        customer_name: document.querySelectorAll("input[type='text']")[1].value,
-        email: document.querySelector("input[type='email']").value,
-        address: document.querySelectorAll("input[type='text']")[2].value,
-        phone1: document.querySelectorAll("input[type='text']")[3].value,
-        phone2: document.querySelectorAll("input[type='text']")[4].value,
+        invoice_number: document.getElementById("invoiceNumber").value.trim(),
+        sale_date: document.getElementById("saleDate").value,
+        delivery_date: document.getElementById("deliveryDate").value,
+        customer_name: document.getElementById("customerName").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        address: document.getElementById("address").value.trim(),
+        phone1: document.getElementById("phone1").value.trim(),
+        phone2: document.getElementById("phone2").value.trim(),
         sale_type: document.getElementById("saleType").value,
-        salesperson: document.querySelectorAll("input[type='text']")[5].value,
-        status: document.querySelector("select").value,
-        notes: document.querySelector("textarea").value,
-        total: Number(document.getElementById("invoiceTotal").textContent),
+        salesperson: document.getElementById("salespersonSelect").value,
+        status: document.getElementById("status").value,
+        notes: document.getElementById("notes").value.trim(),
         tax_percent: Number(document.getElementById("taxPercent").value || 0),
         delivery_fee: Number(document.getElementById("deliveryFee").value || 0),
+        total: Number(document.getElementById("invoiceTotal").textContent),
         items: []
-    }
+    };
 
-    for (const row of document.querySelectorAll("#productsTable tbody tr")) {
-        const productId = row.children[0].children[0].value
-        const qty = Number(row.children[6].children[0].value)
-        const ok = await checkStock(productId, qty)
-        if (!ok) return
+    for(const row of rows){
+        const productSelect = row.querySelector(".product-select");
+        const productId = productSelect.value;
+        const qty = Number(row.querySelector(".qty").value || 0);
+
+        if(!productId){
+            alert("Select a product in all rows.");
+            return;
+        }
+
+        if(qty <= 0){
+            alert("Quantity must be greater than zero.");
+            return;
+        }
+
+        const ok = await checkStock(productId, qty);
+        if(!ok) return;
 
         sale.items.push({
             product_id: productId,
-            item: row.children[0].children[0].selectedOptions[0].text,
-            vendor: row.children[1].children[0].value,
-            description: row.children[2].children[0].value,
-            sku: row.children[3].children[0].value,
-            color: row.children[4].children[0].value,
-            lot_type: row.children[5].children[0].value,
+            item: productSelect.selectedOptions[0].textContent.trim(),
+            vendor: row.querySelector(".vendor").value,
+            description: row.querySelector(".description").value,
+            sku: row.querySelector(".sku").value,
+            color: row.querySelector(".color").value,
+            lot_type: row.querySelector(".lot").value,
             qty: qty,
-            price: Number(row.children[7].children[0].value),
-            line_total: Number(row.children[8].textContent)
-        })
+            price: Number(row.querySelector(".price").value || 0),
+            line_total: Number(row.querySelector(".line-total").textContent || 0)
+        });
     }
 
-    const res = await fetch("/api/sales", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify(sale)
-    })
-    const result = await res.json()
-    if(res.ok){
-        alert("✅ Sale saved successfully")
-        window.location.href="/"
-    } else {
-        alert("❌ " + result.error)
-    }
-})
+    try{
+        const res = await fetch("/api/sales", {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify(sale)
+        });
 
-document.addEventListener("input", function(e){
-    if(e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA"){
-        if(e.target.type === "text" || e.target.tagName === "TEXTAREA"){
-            e.target.value = e.target.value.toUpperCase()
+        const result = await res.json();
+
+        if(res.ok){
+            alert("✅ Sale saved successfully");
+            window.location.href = "/reports/sales-dashboard";
+        }else{
+            alert("❌ " + (result.error || "Failed to save sale"));
         }
-    }
-})
 
+    }catch(err){
+        console.error(err);
+        alert("Server error while saving sale.");
+    }
+});
+
+// -------------------------
+// Uppercase text inputs
+// -------------------------
+document.addEventListener("input", function(e){
+
+    if(e.target.tagName === "TEXTAREA"){
+        e.target.value = e.target.value.toUpperCase();
+        return;
+    }
+
+    if(e.target.tagName === "INPUT" && e.target.type === "text"){
+        e.target.value = e.target.value.toUpperCase();
+        return;
+    }
+
+    if(e.target.tagName === "INPUT" && e.target.type === "email"){
+        e.target.value = e.target.value.toLowerCase();
+    }
+
+});
+
+// Init
+loadProducts();
+loadSalesPeople();
 </script>
 
 </body>
