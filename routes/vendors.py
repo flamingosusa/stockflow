@@ -28,8 +28,8 @@ def get_vendors():
         # Tuple-safe mapping (works in production)
         result = [
             {
-                "code": r[0],
-                "name": r[1]
+                "code": r["code"],
+                "name": r["name"]
             }
             for r in rows
         ]

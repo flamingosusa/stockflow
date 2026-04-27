@@ -33,6 +33,7 @@ def generate_sku(vendor_code, item):
 def get_products():
     conn = get_db_connection()
     cur = conn.cursor()
+
     try:
         cur.execute("""
             SELECT id, sku, item, vendor, description, color,
@@ -41,28 +42,35 @@ def get_products():
             FROM products
             ORDER BY item
         """)
+
         rows = cur.fetchall()
 
-        return jsonify([
-            {
-                "id": r[0],
-                "sku": r[1],
-                "item": r[2],
-                "vendor": r[3],
-                "description": r[4] or "",
-                "color": r[5] or "",
-                "sale_price": float(r[6] or 0),
-                "whs_location": r[7],
-                "lot_type": r[8],
-                "cost": float(r[9] or 0),
-                "freight": float(r[10] or 0),
-                "extended_cost": float(r[11] or 0),
-            }
-            for r in rows
-        ])
+        result = []
+
+        for r in rows:
+            is_dict = isinstance(r, dict)
+
+            result.append({
+                "id": r["id"] if is_dict else r[0],
+                "sku": r["sku"] if is_dict else r[1],
+                "item": r["item"] if is_dict else r[2],
+                "vendor": r["vendor"] if is_dict else r[3],
+                "description": (r["description"] if is_dict else r[4]) or "",
+                "color": (r["color"] if is_dict else r[5]) or "",
+                "sale_price": float((r["sale_price"] if is_dict else r[6]) or 0),
+                "whs_location": r["whs_location"] if is_dict else r[7],
+                "lot_type": r["lot_type"] if is_dict else r[8],
+                "cost": float((r["cost"] if is_dict else r[9]) or 0),
+                "freight": float((r["freight"] if is_dict else r[10]) or 0),
+                "extended_cost": float((r["extended_cost"] if is_dict else r[11]) or 0),
+            })
+
+        return jsonify(result)
+
     except Exception as e:
-        print("GET PRODUCTS ERROR:", str(e))
+        print("GET PRODUCTS ERROR:", e)
         return jsonify({"error": str(e)}), 500
+
     finally:
         cur.close()
         conn.close()
@@ -153,7 +161,8 @@ def create_product():
             freight
         ))
 
-        product_id = cur.fetchone()[0]
+        row = cur.fetchone()
+        product_id = list(row.values())[0]
 
         # Initial stock movement
         if qty > 0:
@@ -175,6 +184,7 @@ def create_product():
 
     except Exception as e:
         conn.rollback()
+        print("PRODUCT PAYLOAD:", data)
         print("CREATE PRODUCT ERROR:", e)
         return jsonify({"error": str(e)}), 500
 
