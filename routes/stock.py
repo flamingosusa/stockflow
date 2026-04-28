@@ -198,14 +198,14 @@ def move_to_floor():
         # Remove from warehouse
         cur.execute("""
             INSERT INTO inventory_movements
-            (product_id, movement_type, quantity, created_at, notes, whs_location)
+            (product_id, movement_type, quantity, created_at, notes, location)
             VALUES (%s, 'OUT', 1, NOW(), 'Moved to FLOOR', 'WAREHOUSE')
         """, (product_id,))
 
         # Add to floor
         cur.execute("""
             INSERT INTO inventory_movements
-            (product_id, movement_type, quantity, created_at, notes, whs_location)
+            (product_id, movement_type, quantity, created_at, notes, location)
             VALUES (%s, 'IN', 1, NOW(), 'Moved to FLOOR', 'FLOOR')
         """, (product_id,))
 
