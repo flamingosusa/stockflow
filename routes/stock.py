@@ -166,7 +166,7 @@ def move_to_floor():
     print("MOVE TO FLOOR RAW:", data)
 
     product_id = data.get("product_id")
-    qty = 1  # force rule
+    qty = 1
 
     if not product_id:
         return jsonify({"error": "Missing product_id"}), 400
@@ -175,10 +175,10 @@ def move_to_floor():
     cur = conn.cursor()
 
     try:
-        # STEP 1: check stock exists
+        # Check available stock
         cur.execute("""
             SELECT COALESCE(SUM(
-                CASE 
+                CASE
                     WHEN movement_type = 'IN' THEN quantity
                     WHEN movement_type = 'OUT' THEN -quantity
                     ELSE 0
@@ -186,29 +186,26 @@ def move_to_floor():
             ), 0)
             FROM inventory_movements
             WHERE product_id = %s
+            AND whs_location = 'WAREHOUSE'
         """, (product_id,))
-        
+
         row = cur.fetchone()
-        stock = list(row.values())[0] if row else 0
-        
+        stock = row[0] if row else 0
+
         if stock < 1:
             return jsonify({"error": "No stock available"}), 400
 
-        # =========================
-        # MOVE TO FLOOR (CORRECT)
-        # =========================
-
-        # 1. REMOVE from warehouse
+        # Remove from warehouse
         cur.execute("""
             INSERT INTO inventory_movements
-            (product_id, movement_type, quantity, created_at, notes, location)
+            (product_id, movement_type, quantity, created_at, notes, whs_location)
             VALUES (%s, 'OUT', 1, NOW(), 'Moved to FLOOR', 'WAREHOUSE')
         """, (product_id,))
 
-        # 2. ADD to floor
+        # Add to floor
         cur.execute("""
             INSERT INTO inventory_movements
-            (product_id, movement_type, quantity, created_at, notes, location)
+            (product_id, movement_type, quantity, created_at, notes, whs_location)
             VALUES (%s, 'IN', 1, NOW(), 'Moved to FLOOR', 'FLOOR')
         """, (product_id,))
 
@@ -224,6 +221,7 @@ def move_to_floor():
     finally:
         cur.close()
         conn.close()
+        
 # -------------------------
 # 🔁 RETURN FROM FLOOR (NEW)
 # -------------------------
