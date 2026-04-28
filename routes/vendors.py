@@ -6,6 +6,22 @@ vendors_bp = Blueprint("vendors_bp", __name__, url_prefix="/api/vendors")
 
 
 # -------------------------
+# Helper: tuple + dict rows
+# -------------------------
+def row_to_vendor(r):
+    if isinstance(r, dict):
+        return {
+            "code": r["code"],
+            "name": r["name"]
+        }
+
+    return {
+        "code": r[0],
+        "name": r[1]
+    }
+
+
+# -------------------------
 # VENDOR FORM PAGE
 # -------------------------
 @vendors_bp.route("/form", methods=["GET"])
@@ -25,14 +41,7 @@ def get_vendors():
         cur.execute("SELECT code, name FROM vendors ORDER BY name")
         rows = cur.fetchall()
 
-        # Tuple-safe mapping (works in production)
-        result = [
-            {
-                "code": r["code"],
-                "name": r["name"]
-            }
-            for r in rows
-        ]
+        result = [row_to_vendor(r) for r in rows]
 
         return jsonify(result)
 
@@ -57,10 +66,13 @@ def fetch_distinct_vendors():
         cur.execute("SELECT DISTINCT vendor FROM products ORDER BY vendor")
         rows = cur.fetchall()
 
-        vendors = [
-            {"vendor": r[0]}
-            for r in rows
-        ]
+        vendors = []
+
+        for r in rows:
+            if isinstance(r, dict):
+                vendors.append({"vendor": r["vendor"]})
+            else:
+                vendors.append({"vendor": r[0]})
 
         return jsonify(vendors)
 
@@ -92,7 +104,7 @@ def add_vendor():
     try:
         cur.execute(
             "INSERT INTO vendors (code, name) VALUES (%s, %s)",
-            (code.upper(), name)
+            (code.upper(), name.upper())
         )
 
         conn.commit()
