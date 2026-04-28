@@ -294,22 +294,40 @@ def get_floor_stock():
         """)
 
         rows = cur.fetchall()
+        result = []
 
-        return jsonify([
-            {
-                "id": r["id"],
-                "item": r["item"],
-                "sku": r["sku"],
-                "vendor": r["vendor"],
-                "color": r["color"],
-                "description": r["description"],
-                "lot_type": r["lot_type"],
-                "cost": float(r["cost"] or 0),
-                "sale_price": float(r["sale_price"] or 0),
-                "on_floor": bool(r["on_floor"])
-            }
-            for r in rows
-        ])
+        for r in rows:
+            # Supports dict rows and tuple rows
+            if isinstance(r, dict):
+                row = r
+            else:
+                row = {
+                    "id": r[0],
+                    "item": r[1],
+                    "sku": r[2],
+                    "vendor": r[3],
+                    "color": r[4],
+                    "description": r[5],
+                    "lot_type": r[6],
+                    "cost": r[7],
+                    "sale_price": r[8],
+                    "on_floor": r[9]
+                }
+
+            result.append({
+                "id": row["id"],
+                "item": row["item"],
+                "sku": row["sku"],
+                "vendor": row["vendor"],
+                "color": row["color"],
+                "description": row["description"],
+                "lot_type": row["lot_type"],
+                "cost": float(row["cost"] or 0),
+                "sale_price": float(row["sale_price"] or 0),
+                "on_floor": bool(row["on_floor"])
+            })
+
+        return jsonify(result)
 
     except Exception as e:
         print("[floor ERROR]:", e)
