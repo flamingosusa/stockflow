@@ -137,6 +137,7 @@ def create_product():
     cost = float(data.get("cost", 0))
     qty = int(data.get("initial_qty", 0))
     freight = float(data.get("freight", 0))
+    sale_price = float(data.get("sale_price", 0))
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -157,12 +158,17 @@ def create_product():
             data["lot_type"],
             data.get("description", ""),
             cost,
-            float(data.get("sale_price", 0)),
+            sale_price,
             freight
         ))
 
         row = cur.fetchone()
-        product_id = list(row.values())[0]
+
+        # Supports dict rows and tuple rows
+        if isinstance(row, dict):
+            product_id = row["id"]
+        else:
+            product_id = row[0]
 
         # Initial stock movement
         if qty > 0:
