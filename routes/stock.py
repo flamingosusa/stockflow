@@ -189,7 +189,12 @@ def move_to_floor():
         """, (product_id,))
         
         row = cur.fetchone()
-        stock = row[0] if row else 0
+        if not row:
+            stock = 0
+        elif isinstance(row, dict):
+            stock = list(row.values())[0]
+        else:
+            stock = row[0]
         
         if stock < 1:
             return jsonify({"error": "No stock available"}), 400
@@ -258,6 +263,9 @@ def revert_floor_sale():
 # -------------------------
 # FLOOR DASHBOARD
 # -------------------------
+# -------------------------
+# FLOOR DASHBOARD
+# -------------------------
 @stock_bp.route("/floor", methods=["GET"], endpoint="floor_stock")
 def get_floor_stock():
     conn = get_db_connection()
@@ -265,7 +273,7 @@ def get_floor_stock():
 
     try:
         cur.execute("""
-        SELECT 
+        SELECT
             p.id,
             p.item,
             p.sku,
@@ -275,21 +283,27 @@ def get_floor_stock():
             p.lot_type,
             p.cost,
             p.sale_price,
-
-            CASE 
-                WHEN (
-                    SELECT m.movement_type
-                    FROM inventory_movements m
-                    WHERE m.product_id = p.id
-                      AND m.location = 'FLOOR'
-                    ORDER BY m.created_at DESC
-                    LIMIT 1
-                ) = 'IN'
-                THEN 1
-                ELSE 0
-            END AS on_floor
-
+            COALESCE(SUM(
+                CASE
+                    WHEN m.movement_type = 'IN' THEN m.quantity
+                    WHEN m.movement_type = 'OUT' THEN -m.quantity
+                    ELSE 0
+                END
+            ), 0) AS floor_qty
         FROM products p
+        JOIN inventory_movements m
+            ON m.product_id = p.id
+        WHERE m.location = 'FLOOR'
+        GROUP BY
+            p.id, p.item, p.sku, p.vendor, p.color,
+            p.description, p.lot_type, p.cost, p.sale_price
+        HAVING COALESCE(SUM(
+            CASE
+                WHEN m.movement_type = 'IN' THEN m.quantity
+                WHEN m.movement_type = 'OUT' THEN -m.quantity
+                ELSE 0
+            END
+        ), 0) > 0
         ORDER BY p.item
         """)
 
@@ -297,7 +311,6 @@ def get_floor_stock():
         result = []
 
         for r in rows:
-            # Supports dict rows and tuple rows
             if isinstance(r, dict):
                 row = r
             else:
@@ -311,7 +324,7 @@ def get_floor_stock():
                     "lot_type": r[6],
                     "cost": r[7],
                     "sale_price": r[8],
-                    "on_floor": r[9]
+                    "floor_qty": r[9]
                 }
 
             result.append({
@@ -324,7 +337,8 @@ def get_floor_stock():
                 "lot_type": row["lot_type"],
                 "cost": float(row["cost"] or 0),
                 "sale_price": float(row["sale_price"] or 0),
-                "on_floor": bool(row["on_floor"])
+                "on_floor": True,
+                "qty": int(row["floor_qty"])
             })
 
         return jsonify(result)
